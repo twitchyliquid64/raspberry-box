@@ -43,6 +43,17 @@ func TestSystemdService(t *testing.T) {
 			},
 			out: "[Service]\nType=notify\nKillMode=control-group\nRestart=no\nNotifyAccess=all\nIgnoreSIGPIPE=no\nStandardOutput=console\n",
 		},
+		{
+			name: "conditions",
+			inp: Service{
+				ExecStart: "echo yolo swaggins",
+				Conditions: Conditions{
+					ConditionExists("/bin/echo"),
+					ConditionHost("pi2"),
+				},
+			},
+			out: "[Service]\nExecStart=echo yolo swaggins\nIgnoreSIGPIPE=no\nConditionPathExists=/bin/echo\nConditionHost=pi2\n",
+		},
 	}
 
 	for _, tc := range tcs {

@@ -138,6 +138,8 @@ type Service struct {
 	IgnoreSigpipe bool
 	Stdout        OutputSinks
 	Stderr        OutputSinks
+
+	Conditions Conditions
 }
 
 // String returns the configuration as a valid service stanza.
@@ -193,6 +195,10 @@ func (s *Service) String() string {
 	}
 	if s.Stderr != 0 {
 		out.WriteString(fmt.Sprintf("StandardError=%s\n", s.Stderr.String()))
+	}
+
+	if cond := s.Conditions.String(); len(cond) > 0 {
+		out.WriteString(cond)
 	}
 
 	return out.String()
