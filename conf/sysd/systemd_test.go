@@ -1,4 +1,4 @@
-package conf
+package sysd
 
 import (
 	"testing"
@@ -8,7 +8,7 @@ import (
 func TestSystemdService(t *testing.T) {
 	tcs := []struct {
 		name string
-		inp  SystemdService
+		inp  Service
 		out  string
 	}{
 		{
@@ -17,7 +17,7 @@ func TestSystemdService(t *testing.T) {
 		},
 		{
 			name: "basic",
-			inp: SystemdService{
+			inp: Service{
 				ExecStart: "/bin/echo yolo",
 				Stdout:    OutputConsole,
 			},
@@ -25,12 +25,23 @@ func TestSystemdService(t *testing.T) {
 		},
 		{
 			name: "restart",
-			inp: SystemdService{
+			inp: Service{
 				Restart:    RestartAlways,
 				RestartSec: 5 * time.Second,
 				Stdout:     OutputConsole,
 			},
 			out: "[Service]\nRestart=always\nRestartSec=5s\nIgnoreSIGPIPE=no\nStandardOutput=console\n",
+		},
+		{
+			name: "complex",
+			inp: Service{
+				NotifyAccess: NotifyAllProcs,
+				Stdout:       OutputConsole | OutputJournal,
+				Type:         NotifyService,
+				KillMode:     KMControlGroup,
+				Restart:      RestartNever,
+			},
+			out: "[Service]\nType=notify\nKillMode=control-group\nRestart=no\nNotifyAccess=all\nIgnoreSIGPIPE=no\nStandardOutput=console\n",
 		},
 	}
 
@@ -46,7 +57,7 @@ func TestSystemdService(t *testing.T) {
 func TestSystemdUnit(t *testing.T) {
 	tcs := []struct {
 		name string
-		inp  SystemdUnit
+		inp  Unit
 		out  string
 	}{
 		{
@@ -55,7 +66,7 @@ func TestSystemdUnit(t *testing.T) {
 		},
 		{
 			name: "basic",
-			inp: SystemdUnit{
+			inp: Unit{
 				Description: "yolo",
 			},
 			out: "[Unit]\nDescription=yolo\n\n",
