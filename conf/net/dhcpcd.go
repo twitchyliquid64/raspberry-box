@@ -30,8 +30,14 @@ type DHCPClientProfile struct {
 	Mode          DHCPMode
 
 	DHCP struct {
-		LeaseSeconds    int
-		ClientID        bool
+		LeaseSeconds int
+
+		ClientID    bool
+		Persistent  bool
+		RapidCommit bool
+		SetupDNS    bool
+		RequestNTP  bool
+
 		PresentHostname bool
 		Hostname        string
 	}
@@ -64,9 +70,22 @@ func (p *DHCPClientProfile) String() string {
 			} else {
 				out.WriteString("hostname\n")
 			}
+			out.WriteString("option host_name\n")
 		}
 		if p.DHCP.ClientID {
 			out.WriteString("clientid\n")
+		}
+		if p.DHCP.Persistent {
+			out.WriteString("persistent\n")
+		}
+		if p.DHCP.RapidCommit {
+			out.WriteString("option rapid_commit\n")
+		}
+		if p.DHCP.SetupDNS {
+			out.WriteString("option domain_name_servers, domain_name, domain_search\n")
+		}
+		if p.DHCP.RequestNTP {
+			out.WriteString("option ntp_servers\n")
 		}
 		if p.DHCP.LeaseSeconds > 0 {
 			out.WriteString(fmt.Sprintf("leasetime %d\n", p.DHCP.LeaseSeconds))
