@@ -1,0 +1,59 @@
+package fs
+
+import (
+	"fmt"
+	"os"
+	"syscall"
+	"time"
+
+	losetup "github.com/freddierice/go-losetup"
+)
+
+// KMount represents access to a filesystem contained within a image file,
+// mediated by the kernel.
+type KMount struct {
+	mntPoint     string
+	loop         losetup.Device
+	needsUnmount bool
+}
+
+// KMountExt4 invokes mount() to mount the ext4 filesystem in the given image,
+// at the provided mount point.
+func KMountExt4(img, mntPoint string, start, length uint64) (*KMount, error) {
+	l, err := losetup.Attach(img, start, false)
+	if err != nil {
+		return nil, fmt.Errorf("loop failed: %v", err)
+	}
+
+	if err := syscall.Mount(l.Path(), mntPoint, "ext4", syscall.MS_NOATIME, ""); err != nil {
+		l.Detach()
+		return nil, fmt.Errorf("mount failed: %v", err)
+	}
+	return &KMount{
+		mntPoint:     mntPoint,
+		loop:         l,
+		needsUnmount: true,
+	}, nil
+}
+
+func (m *KMount) Close() error {
+	var umntErr error
+	for i := 0; i < 4; i++ {
+		if umntErr = syscall.Unmount(m.mntPoint, syscall.MNT_DETACH); umntErr != nil {
+			time.Sleep(250 * time.Millisecond)
+			continue
+		}
+		break
+	}
+	if umntErr != nil {
+		return fmt.Errorf("unmount failed: %v", umntErr)
+	}
+
+	if err := m.loop.Detach(); err != nil {
+		return fmt.Errorf("loopback detach failed: %v", err)
+	}
+	if m.mntPoint != "" {
+		return os.Remove(m.mntPoint)
+	}
+	return nil
+}
