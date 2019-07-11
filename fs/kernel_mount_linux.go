@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -16,6 +17,16 @@ type KMount struct {
 	mntPoint     string
 	loop         losetup.Device
 	needsUnmount bool
+}
+
+// LStat implements sysd.FS.
+func (m *KMount) LStat(path string) (os.FileInfo, error) {
+	return os.Lstat(filepath.Join(m.mntPoint, path))
+}
+
+// Stat implements sysd.FS.
+func (m *KMount) Stat(path string) (os.FileInfo, error) {
+	return os.Stat(filepath.Join(m.mntPoint, path))
 }
 
 // KMountExt4 invokes mount() to mount the ext4 filesystem in the given image,
