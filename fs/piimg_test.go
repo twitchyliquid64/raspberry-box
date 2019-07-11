@@ -2,7 +2,6 @@ package fs
 
 import (
 	"flag"
-	"io/ioutil"
 	"os"
 	"testing"
 
@@ -64,15 +63,17 @@ func TestKMountPiImg(t *testing.T) {
 		t.Errorf("partition table check failed: %v", err)
 	}
 
-	tmpMnt, err := ioutil.TempDir("", "raspberry-box")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer os.Remove(tmpMnt)
-
-	m, err := KMountExt4(*imgPath, tmpMnt, uint64(tab.GetPartition(2).GetLBAStart()*sectorSize), uint64(tab.GetPartition(2).GetLBALen()*sectorSize))
+	m, err := KMountExt4(*imgPath, uint64(tab.GetPartition(2).GetLBAStart()*sectorSize), uint64(tab.GetPartition(2).GetLBALen()*sectorSize))
 	if err != nil {
 		t.Fatalf("KMountExt4() failed: %v", err)
+	}
+	if err := m.Close(); err != nil {
+		t.Errorf("Close() failed: %v", err)
+	}
+
+	m, err = KMountVFat(*imgPath, uint64(tab.GetPartition(1).GetLBAStart()*sectorSize), uint64(tab.GetPartition(1).GetLBALen()*sectorSize))
+	if err != nil {
+		t.Fatalf("KMountVFat() failed: %v", err)
 	}
 	if err := m.Close(); err != nil {
 		t.Errorf("Close() failed: %v", err)
