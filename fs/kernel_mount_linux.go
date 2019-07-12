@@ -29,6 +29,16 @@ func (m *KMount) Stat(path string) (os.FileInfo, error) {
 	return os.Stat(filepath.Join(m.mntPoint, path))
 }
 
+// Symlink implement sysd.FS.
+func (m *KMount) Symlink(at, to string) error {
+	return os.Symlink(to, filepath.Join(m.mntPoint, at))
+}
+
+// Mkdir implement sysd.FS.
+func (m *KMount) Mkdir(at string) error {
+	return os.Mkdir(filepath.Join(m.mntPoint, at), 0755)
+}
+
 // KMountExt4 invokes mount() to mount the ext4 filesystem in the given image,
 // at the provided mount point.
 func KMountExt4(img string, start, length uint64) (*KMount, error) {

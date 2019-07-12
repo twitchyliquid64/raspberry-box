@@ -45,6 +45,42 @@ func TestKMountPiImgUnitExists(t *testing.T) {
 	}
 }
 
+func TestKMountPiImgUnitEnable(t *testing.T) {
+	if *imgPath == "" {
+		t.SkipNow()
+	}
+
+	f, err := os.Open(*imgPath)
+	if err != nil {
+		t.Fatalf("Failed to open image: %v\n", err)
+	}
+
+	tab, err := mbr.Read(f)
+	if err != nil {
+		t.Fatalf("Failed to read table: %v\n", err)
+	}
+	defer f.Close()
+
+	m, err := fs.KMountExt4(*imgPath, uint64(tab.GetPartition(2).GetLBAStart()*sectorSize), uint64(tab.GetPartition(2).GetLBALen()*sectorSize))
+	if err != nil {
+		t.Fatalf("KMountExt4() failed: %v", err)
+	}
+	defer m.Close()
+
+	enabled, err := IsEnabledOnTarget(m, "ssh.service", "default.target")
+	if err != nil {
+		t.Errorf("IsEnabledOnTarget('ssh.service') failed: %v", err)
+	}
+	if enabled {
+		t.SkipNow()
+		return
+	}
+
+	if err := Enable(m, "ssh.service", "default.target"); err != nil {
+		t.Errorf("Enable() failed: %v", err)
+	}
+}
+
 func TestKMountPiImgEnabled(t *testing.T) {
 	if *imgPath == "" {
 		t.SkipNow()

@@ -13,13 +13,6 @@ var (
 	ErrNotInstalled = errors.New("cannot perform action on uninstalled unit")
 )
 
-// FS describes an interface which must be provided, so the package
-// can interact with the filesystem.
-type FS interface {
-	Stat(path string) (os.FileInfo, error)
-	LStat(path string) (os.FileInfo, error)
-}
-
 // IsEnabled returns true if the given unit is enabled on the target.
 func IsEnabledOnTarget(fs FS, unit, target string) (bool, error) {
 	s, err := fs.LStat(filepath.Join("/etc/systemd/system", target+".wants", unit))
@@ -62,5 +55,14 @@ func Enable(fs FS, unit, target string) error {
 		return ErrNotInstalled
 	}
 
-	return nil
+	if _, err := fs.Stat(filepath.Join("/lib/systemd/system", target+".wants")); err != nil {
+		if !os.IsNotExist(err) {
+			return err
+		}
+		if err := fs.Mkdir(filepath.Join("/lib/systemd/system", target+".wants")); err != nil {
+			return err
+		}
+	}
+
+	return fs.Symlink(filepath.Join("/lib/systemd/system", target+".wants", unit), "../"+unit)
 }
