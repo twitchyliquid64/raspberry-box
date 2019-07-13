@@ -14,6 +14,7 @@ func generateEnvironment(s *Script) (starlark.StringDict, error) {
 			return nil, errors.New("soft crash")
 		}),
 		"struct":   starlark.NewBuiltin("struct", starlarkstruct.Make),
+		"args":     starlarkstruct.FromStringDict(starlarkstruct.Default, argBuiltins(s)),
 		"time":     starlarkstruct.FromStringDict(starlarkstruct.Default, t),
 		"math":     starlarkstruct.FromStringDict(starlarkstruct.Default, m),
 		"compiler": starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{"version": starlark.MakeInt64(starlark.CompilerVersion)}),

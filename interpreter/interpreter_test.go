@@ -15,7 +15,7 @@ func TestNewScript(t *testing.T) {
 		return starlark.None, nil
 	}
 
-	s, err := makeScript([]byte(`test_hook(compiler.version)`), "testNewScript.box", nil, testCb)
+	s, err := makeScript([]byte(`test_hook(compiler.version)`), "testNewScript.box", nil, nil, testCb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -36,7 +36,7 @@ func TestLoadScript(t *testing.T) {
 	}
 
 	s, err := makeScript([]byte(`load("pi.lib", "pi")
-test_hook(pi.library_version)`), "testNewScript.box", nil, testCb)
+test_hook(pi.library_version)`), "testNewScript.box", nil, nil, testCb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -159,7 +159,7 @@ func TestMathBuiltins(t *testing.T) {
 			}
 
 			t.Logf("code = %q", code)
-			_, err := makeScript([]byte(code), "testMathBuiltins_"+tc.name+".box", nil, testCb)
+			_, err := makeScript([]byte(code), "testMathBuiltins_"+tc.name+".box", nil, nil, testCb)
 			if err != nil {
 				t.Fatalf("makeScript() failed: %v", err)
 			}
@@ -168,5 +168,25 @@ func TestMathBuiltins(t *testing.T) {
 				t.Errorf("test_hook() = %v, want %v", out, tc.expect)
 			}
 		})
+	}
+}
+
+func TestScriptArgs(t *testing.T) {
+	var a string
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		a = args[0].(starlark.String).GoString()
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`test_hook(args.arg(0) + " num=" + str(args.num_args()))`), "testNewScript.box", nil, []string{"--verbose", "test.img"}, testCb)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if a != "test.img num=1" {
+		t.Errorf("a = %v, want %v", a, "test.img num=1")
 	}
 }

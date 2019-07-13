@@ -3,6 +3,7 @@ package interpreter
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 
 	"github.com/twitchyliquid64/raspberry-box/interpreter/lib"
@@ -13,6 +14,10 @@ import (
 type Script struct {
 	loader ScriptLoader
 
+	args    []string
+	fs      *flag.FlagSet
+	verbose bool
+
 	thread  *starlark.Thread
 	globals starlark.StringDict
 
@@ -21,14 +26,20 @@ type Script struct {
 }
 
 // NewScript initializes a new raspberry-box script environment.
-func NewScript(data []byte, fname string, loader ScriptLoader) (*Script, error) {
-	return makeScript(data, fname, loader, nil)
+func NewScript(data []byte, fname string, loader ScriptLoader, args []string) (*Script, error) {
+	return makeScript(data, fname, loader, args, nil)
 }
 
-func makeScript(data []byte, fname string, loader ScriptLoader, testHook func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error)) (*Script, error) {
+func makeScript(data []byte, fname string, loader ScriptLoader, args []string,
+	testHook func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error)) (*Script, error) {
 	out := &Script{
 		loader:   loader,
 		testHook: testHook,
+		args:     args,
+	}
+
+	if err := out.initFlags(); err != nil {
+		return nil, err
 	}
 
 	var err error
