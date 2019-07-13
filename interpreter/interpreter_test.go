@@ -2,11 +2,20 @@ package interpreter
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"testing"
 
 	"go.starlark.net/starlark"
 )
+
+var (
+	imgPath = flag.String("pi-img", "", "Path to a mint raspbian image.")
+)
+
+func init() {
+	flag.Parse()
+}
 
 func TestNewScript(t *testing.T) {
 	var cVersion string
@@ -188,5 +197,30 @@ func TestScriptArgs(t *testing.T) {
 
 	if a != "test.img num=1" {
 		t.Errorf("a = %v, want %v", a, "test.img num=1")
+	}
+}
+
+func TestScriptFsPartitionsPiImage(t *testing.T) {
+	if *imgPath == "" {
+		t.SkipNow()
+	}
+	var a string
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		a = args[0].(starlark.String).GoString()
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+test_hook(str(fs.read_partitions(args.arg(0))))`), "testScriptFsPartitionsPiImage.box", nil, []string{*imgPath}, testCb)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	want := "[struct(bootable = False, empty = False, index = 0, lba = struct(length = 89854, start = 8192), type = 12, type_name = \"FAT32-LBA\"), struct(bootable = False, empty = False, index = 1, lba = struct(length = 3547136, start = 98304), type = 131, type_name = \"Native Linux\"), struct(bootable = False, empty = True, index = 2, lba = struct(length = 0, start = 0), type = 0, type_name = \"\"), struct(bootable = False, empty = True, index = 3, lba = struct(length = 0, start = 0), type = 0, type_name = \"\")]"
+	if a != want {
+		t.Errorf("a = %v, want %v", a, want)
 	}
 }

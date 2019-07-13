@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 
 	"github.com/twitchyliquid64/raspberry-box/interpreter/lib"
 	"go.starlark.net/starlark"
@@ -21,8 +22,18 @@ type Script struct {
 	thread  *starlark.Thread
 	globals starlark.StringDict
 
+	resources []io.Closer
+
 	// testHook is only accessible and populated from unit tests.
 	testHook func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error)
+}
+
+// Close shuts down all resources associated with the script.
+func (s *Script) Close() error {
+	for _, r := range s.resources {
+		r.Close()
+	}
+	return nil
 }
 
 // NewScript initializes a new raspberry-box script environment.
