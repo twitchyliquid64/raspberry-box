@@ -12,4 +12,5 @@ type FS interface {
 	LStat(path string) (os.FileInfo, error)
 	Symlink(at, to string) error
 	Mkdir(at string) error
+	Write(path string, data []byte, perms os.FileMode) error
 }
