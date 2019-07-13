@@ -6,5 +6,6 @@ require (
 	github.com/freddierice/go-losetup v0.0.0-20170407175016-fc9adea44124
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/rekby/mbr v0.0.0-20190325193910-2b19b9cdeebc
+	go.starlark.net v0.0.0-20190712141925-d6561f809f31
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7 // indirect
 )
