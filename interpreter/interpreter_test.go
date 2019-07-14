@@ -4,8 +4,10 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"reflect"
 	"testing"
 
+	"github.com/twitchyliquid64/raspberry-box/conf/sysd"
 	"go.starlark.net/starlark"
 )
 
@@ -222,5 +224,53 @@ test_hook(str(fs.read_partitions(args.arg(0))))`), "testScriptFsPartitionsPiImag
 	want := "[struct(bootable = False, empty = False, index = 0, lba = struct(length = 89854, start = 8192), type = 12, type_name = \"FAT32-LBA\"), struct(bootable = False, empty = False, index = 1, lba = struct(length = 3547136, start = 98304), type = 131, type_name = \"Native Linux\"), struct(bootable = False, empty = True, index = 2, lba = struct(length = 0, start = 0), type = 0, type_name = \"\"), struct(bootable = False, empty = True, index = 3, lba = struct(length = 0, start = 0), type = 0, type_name = \"\")]"
 	if a != want {
 		t.Errorf("a = %v, want %v", a, want)
+	}
+}
+
+func TestBuildSysd(t *testing.T) {
+	var out starlark.Tuple
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		out = args
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+unit = systemd.Unit(
+	description="description yo",
+	after=["kek", "startup.service"]
+)
+unit.append_required_by(["woooo"], "mate")
+serv = systemd.Service(exec_start="echo kek")
+serv.set_type(systemd.const.service_simple)
+unit.set_service(serv)
+test_hook(unit, unit.description, unit.service)`), "testBuildSysd.box", nil, nil, testCb)
+	if err != nil {
+		t.Fatalf("makeScript() failed: %v", err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if out[0].(*SystemdUnitProxy).Unit.Description != "description yo" {
+		t.Errorf("out.Unit.Description = %v, want %v", out[0].(*SystemdUnitProxy).Unit.Description, "description yo")
+	}
+	if got, want := string(out[1].(starlark.String)), out[0].(*SystemdUnitProxy).Unit.Description; got != want {
+		t.Errorf("unit.description = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdUnitProxy).Unit.After, []string{"kek", "startup.service"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("out.Unit.After = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdUnitProxy).Unit.RequiredBy, []string{"woooo", "mate"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("out.Unit.RequiredBy = %v, want %v", got, want)
+	}
+
+	if got, want := out[2].(*SystemdServiceProxy).Service.Type, sysd.SimpleService; got != want {
+		t.Errorf("out.Service.Type = %v, %v", got, want)
+	}
+	if got, want := out[2].(*SystemdServiceProxy).Service.ExecStart, "echo kek"; got != want {
+		t.Errorf("out.Service.ExecStart = %v, %v", got, want)
+	}
+	if out[2].(*SystemdServiceProxy).Service != out[0].(*SystemdUnitProxy).Unit.Service {
+		t.Errorf("out.Unit.Service (%v) != out.Service (%v)", out[0].(*SystemdUnitProxy).Unit.Service, out[2].(*SystemdServiceProxy).Service)
 	}
 }

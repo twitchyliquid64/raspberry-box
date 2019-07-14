@@ -76,3 +76,11 @@ func (s *Script) resolveImport(path string) ([]byte, error) {
 	}
 	return s.loader.resolveImport(path)
 }
+
+func cvStrListToStarlark(in []string) *starlark.List {
+	out := make([]starlark.Value, len(in))
+	for i := range in {
+		out[i] = starlark.String(in[i])
+	}
+	return starlark.NewList(out)
+}
