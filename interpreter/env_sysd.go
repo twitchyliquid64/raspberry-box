@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/twitchyliquid64/raspberry-box/conf/sysd"
 	"go.starlark.net/starlark"
@@ -102,9 +103,16 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 		}),
 
 		"Service": starlark.NewBuiltin("Service", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-			var t, execStart, rootDir, usr, grp, restart starlark.String
+			var (
+				t, execStart, rootDir, usr, grp starlark.String
+				killMode, restart               starlark.String
+				restartSec, timeoutStopSec      starlark.Value
+				watchdogSec                     starlark.Value
+			)
 			if err := starlark.UnpackArgs("Service", args, kwargs, "type?", &t, "exec_start", &execStart,
-				"root_dir", &rootDir, "user", &usr, "group", &grp, "restart", &restart); err != nil {
+				"root_dir", &rootDir, "user", &usr, "group", &grp, "restart", &restart,
+				"kill_mode", &killMode, "timeout_stop_sec", &timeoutStopSec, "restart_sec", &restartSec,
+				"watchdog_sec", &watchdogSec); err != nil {
 				return starlark.None, err
 			}
 
@@ -114,7 +122,29 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 				RootDir:   string(rootDir),
 				User:      string(usr),
 				Group:     string(grp),
+				KillMode:  sysd.KillMode(killMode),
 				Restart:   sysd.RestartMode(restart),
+			}
+			if restartSec != nil {
+				d, err := decodeDuration(restartSec)
+				if err != nil {
+					return starlark.None, fmt.Errorf("decoding restart_sec: %v", err)
+				}
+				out.RestartSec = d
+			}
+			if timeoutStopSec != nil {
+				d, err := decodeDuration(timeoutStopSec)
+				if err != nil {
+					return starlark.None, fmt.Errorf("decoding timeout_stop_sec: %v", err)
+				}
+				out.TimeoutStopSec = d
+			}
+			if watchdogSec != nil {
+				d, err := decodeDuration(watchdogSec)
+				if err != nil {
+					return starlark.None, fmt.Errorf("decoding watchdog_sec: %v", err)
+				}
+				out.WatchdogSec = d
 			}
 
 			return &SystemdServiceProxy{
@@ -122,6 +152,17 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 			}, nil
 		}),
 	}
+}
+
+func decodeDuration(v starlark.Value) (time.Duration, error) {
+	if num, ok := v.(starlark.Int); ok {
+		uVal, _ := num.Uint64()
+		return time.Duration(uVal), nil
+	}
+	if str, ok := v.(starlark.String); ok {
+		return time.ParseDuration(string(str))
+	}
+	return time.Duration(0), fmt.Errorf("cannot represent type %T as a duration", v)
 }
 
 // SystemdUnitProxy proxies access to a unit structure.
@@ -389,6 +430,15 @@ func (p *SystemdServiceProxy) setGroup(thread *starlark.Thread, fn *starlark.Bui
 	return starlark.None, nil
 }
 
+func (p *SystemdServiceProxy) setRestart(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Service.Restart = sysd.RestartMode(s)
+	return starlark.None, nil
+}
+
 // Attr implements starlark.Value.
 func (p *SystemdServiceProxy) Attr(name string) (starlark.Value, error) {
 	switch name {
@@ -416,6 +466,16 @@ func (p *SystemdServiceProxy) Attr(name string) (starlark.Value, error) {
 		return starlark.String(p.Service.Group), nil
 	case "set_group":
 		return starlark.NewBuiltin("set_user", p.setGroup), nil
+	case "restart":
+		return starlark.String(p.Service.Restart), nil
+	case "set_restart":
+		return starlark.NewBuiltin("set_restart", p.setRestart), nil
+	case "restart_sec":
+		return starlark.MakeUint64(uint64(p.Service.RestartSec)), nil
+	case "timeout_stop_sec":
+		return starlark.MakeUint64(uint64(p.Service.TimeoutStopSec)), nil
+	case "watchdog_sec":
+		return starlark.MakeUint64(uint64(p.Service.WatchdogSec)), nil
 	}
 
 	return nil, starlark.NoSuchAttrError(
@@ -425,5 +485,5 @@ func (p *SystemdServiceProxy) Attr(name string) (starlark.Value, error) {
 // AttrNames implements starlark.Value.
 func (p *SystemdServiceProxy) AttrNames() []string {
 	return []string{"type", "set_type", "exec_start", "set_exec_start", "root_dir", "set_root_dir", "kill_mode", "set_kill_mode",
-		"user", "set_user", "group", "set_group"}
+		"user", "set_user", "group", "set_group", "restart", "set_restart", "restart_sec", "timeout_stop_sec", "watchdog_sec"}
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/twitchyliquid64/raspberry-box/conf/sysd"
 	"go.starlark.net/starlark"
@@ -241,7 +242,7 @@ unit = systemd.Unit(
 )
 unit.description = "description yo"
 unit.append_required_by(["woooo"], "mate")
-serv = systemd.Service(exec_start="echo kek")
+serv = systemd.Service(exec_start="echo kek", restart="always", restart_sec="15s")
 serv.set_type(systemd.const.service_simple)
 unit.service = serv
 test_hook(unit, unit.description, unit.service)`), "testBuildSysd.box", nil, nil, testCb)
@@ -266,10 +267,16 @@ test_hook(unit, unit.description, unit.service)`), "testBuildSysd.box", nil, nil
 	}
 
 	if got, want := out[2].(*SystemdServiceProxy).Service.Type, sysd.SimpleService; got != want {
-		t.Errorf("out.Service.Type = %v, %v", got, want)
+		t.Errorf("out.Service.Type = %v, want %v", got, want)
 	}
 	if got, want := out[2].(*SystemdServiceProxy).Service.ExecStart, "echo kek"; got != want {
-		t.Errorf("out.Service.ExecStart = %v, %v", got, want)
+		t.Errorf("out.Service.ExecStart = %v, want %v", got, want)
+	}
+	if got, want := out[2].(*SystemdServiceProxy).Service.Restart, sysd.RestartAlways; got != want {
+		t.Errorf("out.Service.Restart = %v, want %v", got, want)
+	}
+	if got, want := out[2].(*SystemdServiceProxy).Service.RestartSec, time.Duration(15*time.Second); got != want {
+		t.Errorf("out.Service.RestartSec = %v, want %v", got, want)
 	}
 	if out[2].(*SystemdServiceProxy).Service != out[0].(*SystemdUnitProxy).Unit.Service {
 		t.Errorf("out.Unit.Service (%v) != out.Service (%v)", out[0].(*SystemdUnitProxy).Unit.Service, out[2].(*SystemdServiceProxy).Service)
