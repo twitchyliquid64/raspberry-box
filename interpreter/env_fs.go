@@ -44,6 +44,21 @@ func fsBuiltins(s *Script) starlark.StringDict {
 		"enums": starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
 			"partitions": starlarkstruct.FromStringDict(starlarkstruct.Default, partEnums),
 		}),
+		"perms": starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
+			"set_uid": starlark.MakeInt64(1 << (12 - 1 - 0)),
+			"set_gid": starlark.MakeInt64(1 << (12 - 1 - 1)),
+			"sticky":  starlark.MakeInt64(1 << (12 - 1 - 2)),
+			"user_r":  starlark.MakeInt64(1 << (12 - 1 - 3)),
+			"user_w":  starlark.MakeInt64(1 << (12 - 1 - 4)),
+			"user_x":  starlark.MakeInt64(1 << (12 - 1 - 5)),
+			"group_r": starlark.MakeInt64(1 << (12 - 1 - 6)),
+			"group_w": starlark.MakeInt64(1 << (12 - 1 - 7)),
+			"group_x": starlark.MakeInt64(1 << (12 - 1 - 8)),
+			"other_r": starlark.MakeInt64(1 << (12 - 1 - 9)),
+			"other_w": starlark.MakeInt64(1 << (12 - 1 - 10)),
+			"other_x": starlark.MakeInt64(1 << (12 - 1 - 11)),
+			"default": starlark.MakeInt64(0755),
+		}),
 		"read_partitions": makeReadPartitions(s),
 		"stat": starlark.NewBuiltin("stat", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 			var path starlark.String
@@ -256,16 +271,41 @@ func (p *FSMountProxy) Hash() (uint32, error) {
 
 // AttrNames implements starlark.Value.
 func (p *FSMountProxy) AttrNames() []string {
-	return []string{"base", "cat"}
+	return []string{"base", "cat", "stat", "mkdir", "write"}
 }
 
 // Attr implements starlark.Value.
 func (p *FSMountProxy) Attr(name string) (starlark.Value, error) {
 	switch name {
+	case "stat":
+		return starlark.NewBuiltin("stat", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			if err := starlark.UnpackArgs("stat", args, kwargs, "path", &path); err != nil {
+				return starlark.None, err
+			}
+
+			s, err := p.fs.Stat(string(path))
+			if err != nil {
+				return starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
+					"success":    starlark.Bool(false),
+					"error":      starlark.String(err.Error()),
+					"not_exists": starlark.Bool(os.IsNotExist(err)),
+				}), nil
+			}
+			return starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
+				"success":    starlark.Bool(true),
+				"error":      starlark.Bool(false),
+				"not_exists": starlark.Bool(false),
+				"name":       starlark.String(s.Name()),
+				"size":       starlark.MakeInt64(s.Size()),
+				"dir":        starlark.Bool(s.IsDir()),
+				"mode":       starlark.MakeInt64(int64(s.Mode())),
+			}), nil
+		}), nil
 	case "cat":
 		return starlark.NewBuiltin("cat", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 			var path starlark.String
-			if err := starlark.UnpackArgs("c", args, kwargs, "path", &path); err != nil {
+			if err := starlark.UnpackArgs("cat", args, kwargs, "path", &path); err != nil {
 				return starlark.None, err
 			}
 
@@ -274,6 +314,27 @@ func (p *FSMountProxy) Attr(name string) (starlark.Value, error) {
 				return starlark.None, err
 			}
 			return starlark.String(string(d)), nil
+		}), nil
+	case "mkdir":
+		return starlark.NewBuiltin("mkdir", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			if err := starlark.UnpackArgs("mkdir", args, kwargs, "path", &path); err != nil {
+				return starlark.None, err
+			}
+			return starlark.None, p.fs.Mkdir(string(path))
+		}), nil
+	case "write":
+		return starlark.NewBuiltin("write", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path, data starlark.String
+			var perms starlark.Int
+			if err := starlark.UnpackArgs("write", args, kwargs, "path", &path, "data", &data, "permission", &perms); err != nil {
+				return starlark.None, err
+			}
+			permInt, ok := perms.Uint64()
+			if !ok {
+				return starlark.None, errors.New("permissions must be an unsigned integer")
+			}
+			return starlark.None, p.fs.Write(string(path), []byte(data), os.FileMode(permInt))
 		}), nil
 	case "base":
 		return starlark.String(p.Path), nil
