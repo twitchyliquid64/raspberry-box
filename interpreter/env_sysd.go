@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"crypto/sha256"
+	"errors"
 	"fmt"
 
 	"github.com/twitchyliquid64/raspberry-box/conf/sysd"
@@ -281,6 +282,24 @@ func (p *SystemdUnitProxy) Attr(name string) (starlark.Value, error) {
 func (p *SystemdUnitProxy) AttrNames() []string {
 	return []string{"description", "set_description", "required_by", "append_required_by", "after", "append_after",
 		"wanted_by", "append_wanted_by", "service", "set_service"}
+}
+
+// SetField implements starlark.HasSetField.
+func (p *SystemdUnitProxy) SetField(name string, val starlark.Value) error {
+	switch name {
+	case "description":
+		_, err := p.setDescription(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "service":
+		s, ok := val.(*SystemdServiceProxy)
+		if !ok {
+			return fmt.Errorf("cannot assign value with type %T to a systemd.Service", val)
+		}
+		p.servProxy = s
+		p.Unit.Service = s.Service
+		return nil
+	}
+	return errors.New("no such assignable field: " + name)
 }
 
 // SystemdServiceProxy proxies access to a service structure.

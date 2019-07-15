@@ -236,13 +236,14 @@ func TestBuildSysd(t *testing.T) {
 
 	s, err := makeScript([]byte(`
 unit = systemd.Unit(
-	description="description yo",
+	description="description",
 	after=["kek", "startup.service"]
 )
+unit.description = "description yo"
 unit.append_required_by(["woooo"], "mate")
 serv = systemd.Service(exec_start="echo kek")
 serv.set_type(systemd.const.service_simple)
-unit.set_service(serv)
+unit.service = serv
 test_hook(unit, unit.description, unit.service)`), "testBuildSysd.box", nil, nil, testCb)
 	if err != nil {
 		t.Fatalf("makeScript() failed: %v", err)
