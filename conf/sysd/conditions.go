@@ -31,6 +31,9 @@ func (c ConditionExists) conditionKey() string {
 func (c ConditionExists) conditionArg() string {
 	return string(c)
 }
+func (c ConditionExists) String() string {
+	return "Exists(" + string(c) + ")"
+}
 
 // ConditionNotExists specifies a file must be missing at the path.
 type ConditionNotExists string
@@ -41,6 +44,9 @@ func (c ConditionNotExists) conditionKey() string {
 func (c ConditionNotExists) conditionArg() string {
 	return string(c)
 }
+func (c ConditionNotExists) String() string {
+	return "NotExists(" + string(c) + ")"
+}
 
 // ConditionHost specifies the machine must be a given hostname or machine ID.
 type ConditionHost string
@@ -50,4 +56,7 @@ func (c ConditionHost) conditionKey() string {
 }
 func (c ConditionHost) conditionArg() string {
 	return string(c)
+}
+func (c ConditionHost) String() string {
+	return "Host(" + string(c) + ")"
 }

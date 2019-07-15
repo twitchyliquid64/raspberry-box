@@ -314,6 +314,9 @@ serv.stdout = systemd.out.console + systemd.out.journal
 serv.set_stderr(systemd.out.console)
 serv.stderr = systemd.out.console + systemd.out.journal
 
+serv.set_conditions([systemd.ConditionExists("/bin/systemd"), systemd.ConditionHost("aaa")])
+serv.conditions = [systemd.ConditionNotExists("/bin/systemd"), serv.conditions[0], serv.conditions[1]]
+
 test_hook(serv)`), "testBuildSysdService.box", nil, nil, testCb)
 	if err != nil {
 		t.Fatalf("makeScript() failed: %v", err)
@@ -357,5 +360,37 @@ test_hook(serv)`), "testBuildSysdService.box", nil, nil, testCb)
 	}
 	if got, want := out[0].(*SystemdServiceProxy).Service.Stderr, sysd.OutputConsole|sysd.OutputJournal; got != want {
 		t.Errorf("out.Service.Stderr = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.Conditions, (sysd.Conditions{
+		sysd.ConditionNotExists("/bin/systemd"),
+		sysd.ConditionExists("/bin/systemd"),
+		sysd.ConditionHost("aaa"),
+	}); !reflect.DeepEqual(got, want) {
+		t.Errorf("out.Service.Conditions = %v, want %v", got, want)
+	}
+}
+
+func TestBuildSysdCondition(t *testing.T) {
+	var out starlark.Tuple
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		out = args
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+c = systemd.ConditionHost("aaaa")
+test_hook(c, c.arg)`), "testBuildSysdCondition.box", nil, nil, testCb)
+	if err != nil {
+		t.Fatalf("makeScript() failed: %v", err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if got, want := out[0].(*SystemdConditionProxy).Kind, "ConditionHost"; got != want {
+		t.Errorf("out.Kind = %v, want %v", got, want)
+	}
+	if got, want := string(out[1].(starlark.String)), "aaaa"; got != want {
+		t.Errorf("out[1] = %v, want %v", got, want)
 	}
 }
