@@ -2,6 +2,7 @@ package interpreter
 
 import (
 	"errors"
+	"io/ioutil"
 
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
@@ -27,6 +28,13 @@ func generateEnvironment(s *Script) (starlark.StringDict, error) {
 	}
 
 	return g, nil
+}
+
+// WDLoader loads scripts relative to the working directory.
+type WDLoader struct{}
+
+func (l *WDLoader) resolveImport(name string) ([]byte, error) {
+	return ioutil.ReadFile(name)
 }
 
 // ScriptLoader provides a means for arbitrary imports to be resolved.

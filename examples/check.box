@@ -1,0 +1,18 @@
+load('pi.lib', "pi")
+
+# fallback_template is called if no --template is provided to compute
+# the value.
+def fallback_template():
+    if not fs.exists("pi.img"):
+        crash("cannot find pi.img, and no --template image specified.")
+    return "pi.img"
+
+# setup is called before build().
+def setup(template):
+    print("Using piLib v%d" % pi.library_version)
+    return {"template_path": template}
+
+# build is called to actually build the image.
+# The return value of setup() is passed to build().
+def build(setup):
+    print(setup)

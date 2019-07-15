@@ -27,7 +27,7 @@ func TestNewScript(t *testing.T) {
 		return starlark.None, nil
 	}
 
-	s, err := makeScript([]byte(`test_hook(compiler.version)`), "testNewScript.box", nil, nil, testCb)
+	s, err := makeScript([]byte(`test_hook(compiler.version)`), "testNewScript.box", nil, nil, false, testCb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestLoadScript(t *testing.T) {
 	}
 
 	s, err := makeScript([]byte(`load("pi.lib", "pi")
-test_hook(pi.library_version)`), "testNewScript.box", nil, nil, testCb)
+test_hook(pi.library_version)`), "testNewScript.box", nil, nil, false, testCb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -171,7 +171,7 @@ func TestMathBuiltins(t *testing.T) {
 			}
 
 			t.Logf("code = %q", code)
-			_, err := makeScript([]byte(code), "testMathBuiltins_"+tc.name+".box", nil, nil, testCb)
+			_, err := makeScript([]byte(code), "testMathBuiltins_"+tc.name+".box", nil, nil, false, testCb)
 			if err != nil {
 				t.Fatalf("makeScript() failed: %v", err)
 			}
@@ -190,7 +190,7 @@ func TestScriptArgs(t *testing.T) {
 		return starlark.None, nil
 	}
 
-	s, err := makeScript([]byte(`test_hook(args.arg(0) + " num=" + str(args.num_args()))`), "testNewScript.box", nil, []string{"--verbose", "test.img"}, testCb)
+	s, err := makeScript([]byte(`test_hook(args.arg(0) + " num=" + str(args.num_args()))`), "testNewScript.box", nil, []string{"test.img"}, false, testCb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestScriptFsPartitionsPiImage(t *testing.T) {
 	}
 
 	s, err := makeScript([]byte(`
-test_hook(str(fs.read_partitions(args.arg(0))))`), "testScriptFsPartitionsPiImage.box", nil, []string{*imgPath}, testCb)
+test_hook(str(fs.read_partitions(args.arg(0))))`), "testScriptFsPartitionsPiImage.box", nil, []string{*imgPath}, false, testCb)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -246,7 +246,7 @@ unit.append_required_by(["woooo"], "mate")
 serv = systemd.Service()
 unit.service = serv
 
-test_hook(unit, unit.description, unit.service)`), "testBuildSysdUnit.box", nil, nil, testCb)
+test_hook(unit, unit.description, unit.service)`), "testBuildSysdUnit.box", nil, nil, false, testCb)
 	if err != nil {
 		t.Fatalf("makeScript() failed: %v", err)
 	}
@@ -317,7 +317,7 @@ serv.stderr = systemd.out.console + systemd.out.journal
 serv.set_conditions([systemd.ConditionExists("/bin/systemd"), systemd.ConditionHost("aaa")])
 serv.conditions = [systemd.ConditionNotExists("/bin/systemd"), serv.conditions[0], serv.conditions[1]]
 
-test_hook(serv)`), "testBuildSysdService.box", nil, nil, testCb)
+test_hook(serv)`), "testBuildSysdService.box", nil, nil, false, testCb)
 	if err != nil {
 		t.Fatalf("makeScript() failed: %v", err)
 	}
@@ -379,7 +379,7 @@ func TestBuildSysdCondition(t *testing.T) {
 
 	s, err := makeScript([]byte(`
 c = systemd.ConditionHost("aaaa")
-test_hook(c, c.arg)`), "testBuildSysdCondition.box", nil, nil, testCb)
+test_hook(c, c.arg)`), "testBuildSysdCondition.box", nil, nil, false, testCb)
 	if err != nil {
 		t.Fatalf("makeScript() failed: %v", err)
 	}

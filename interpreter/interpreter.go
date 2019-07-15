@@ -19,8 +19,9 @@ type Script struct {
 	fs      *flag.FlagSet
 	verbose bool
 
-	thread  *starlark.Thread
-	globals starlark.StringDict
+	thread   *starlark.Thread
+	globals  starlark.StringDict
+	setupVal starlark.Value
 
 	resources []io.Closer
 
@@ -37,16 +38,17 @@ func (s *Script) Close() error {
 }
 
 // NewScript initializes a new raspberry-box script environment.
-func NewScript(data []byte, fname string, loader ScriptLoader, args []string) (*Script, error) {
-	return makeScript(data, fname, loader, args, nil)
+func NewScript(data []byte, fname string, verbose bool, loader ScriptLoader, args []string) (*Script, error) {
+	return makeScript(data, fname, loader, args, verbose, nil)
 }
 
-func makeScript(data []byte, fname string, loader ScriptLoader, args []string,
+func makeScript(data []byte, fname string, loader ScriptLoader, args []string, verbose bool,
 	testHook func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error)) (*Script, error) {
 	out := &Script{
 		loader:   loader,
 		testHook: testHook,
 		args:     args,
+		verbose:  verbose,
 	}
 
 	if err := out.initFlags(); err != nil {
@@ -83,4 +85,47 @@ func cvStrListToStarlark(in []string) *starlark.List {
 		out[i] = starlark.String(in[i])
 	}
 	return starlark.NewList(out)
+}
+
+// Setup calls the setup() method in the script.
+func (s *Script) Setup(templatePath string) error {
+	if fn, exists := s.globals["setup"]; exists {
+		setupVal, err := starlark.Call(s.thread, fn, starlark.Tuple{starlark.String(templatePath)}, nil)
+		if err != nil {
+			return err
+		}
+		s.setupVal = setupVal
+	} else {
+		s.setupVal = starlark.None
+	}
+	return nil
+}
+
+// Build calls the build() method in the script.
+func (s *Script) Build() error {
+	fn, exists := s.globals["build"]
+	if !exists {
+		return errors.New("build() function not present")
+	}
+	if _, err := starlark.Call(s.thread, fn, starlark.Tuple{s.setupVal}, nil); err != nil {
+		return err
+	}
+	return nil
+}
+
+// CallFn calls an arbitrary function
+func (s *Script) CallFn(fname string) (string, error) {
+	fn, exists := s.globals[fname]
+	if !exists {
+		return "", fmt.Errorf("%s() function not present", fname)
+	}
+	ret, err := starlark.Call(s.thread, fn, starlark.Tuple{}, nil)
+	if err != nil {
+		return "", err
+	}
+	result, ok := ret.(starlark.String)
+	if !ok {
+		return "", fmt.Errorf("%s() returned type %T, want string", fname, ret)
+	}
+	return string(result), nil
 }

@@ -36,7 +36,6 @@ func argBuiltins(s *Script) starlark.StringDict {
 
 func (s *Script) initFlags() error {
 	s.fs = flag.NewFlagSet("raspberry-box", flag.ContinueOnError)
-	s.fs.BoolVar(&s.verbose, "verbose", false, "Enable verbose printing")
 
 	if len(s.args) > 0 {
 		if err := s.fs.Parse(s.args); err != nil {
