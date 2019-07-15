@@ -108,22 +108,26 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 				killMode, restart               starlark.String
 				restartSec, timeoutStopSec      starlark.Value
 				watchdogSec                     starlark.Value
+				ignoreSigpipe                   starlark.Bool
+				stderr, stdout                  starlark.Int
 			)
 			if err := starlark.UnpackArgs("Service", args, kwargs, "type?", &t, "exec_start", &execStart,
 				"root_dir", &rootDir, "user", &usr, "group", &grp, "restart", &restart,
 				"kill_mode", &killMode, "timeout_stop_sec", &timeoutStopSec, "restart_sec", &restartSec,
-				"watchdog_sec", &watchdogSec); err != nil {
+				"watchdog_sec", &watchdogSec, "ignore_sigpipe", &ignoreSigpipe,
+				"stderr", &stderr, "stdout", &stdout); err != nil {
 				return starlark.None, err
 			}
 
 			out := sysd.Service{
-				Type:      sysd.ServiceType(t),
-				ExecStart: string(execStart),
-				RootDir:   string(rootDir),
-				User:      string(usr),
-				Group:     string(grp),
-				KillMode:  sysd.KillMode(killMode),
-				Restart:   sysd.RestartMode(restart),
+				Type:          sysd.ServiceType(t),
+				ExecStart:     string(execStart),
+				RootDir:       string(rootDir),
+				User:          string(usr),
+				Group:         string(grp),
+				KillMode:      sysd.KillMode(killMode),
+				Restart:       sysd.RestartMode(restart),
+				IgnoreSigpipe: bool(ignoreSigpipe),
 			}
 			if restartSec != nil {
 				d, err := decodeDuration(restartSec)
@@ -145,6 +149,12 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 					return starlark.None, fmt.Errorf("decoding watchdog_sec: %v", err)
 				}
 				out.WatchdogSec = d
+			}
+			if stderr, ok := stderr.Int64(); ok {
+				out.Stderr = sysd.OutputSinks(stderr)
+			}
+			if stdout, ok := stderr.Int64(); ok {
+				out.Stdout = sysd.OutputSinks(stdout)
 			}
 
 			return &SystemdServiceProxy{
@@ -439,6 +449,68 @@ func (p *SystemdServiceProxy) setRestart(thread *starlark.Thread, fn *starlark.B
 	return starlark.None, nil
 }
 
+func (p *SystemdServiceProxy) setRestartSec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	d, err := decodeDuration(args[0])
+	if err != nil {
+		return starlark.None, err
+	}
+	p.Service.RestartSec = d
+	return starlark.None, nil
+}
+
+func (p *SystemdServiceProxy) setTimeoutStopSec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	d, err := decodeDuration(args[0])
+	if err != nil {
+		return starlark.None, err
+	}
+	p.Service.TimeoutStopSec = d
+	return starlark.None, nil
+}
+
+func (p *SystemdServiceProxy) setWatchdogSec(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	d, err := decodeDuration(args[0])
+	if err != nil {
+		return starlark.None, err
+	}
+	p.Service.WatchdogSec = d
+	return starlark.None, nil
+}
+
+func (p *SystemdServiceProxy) setIgnoreSigpipe(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	b, ok := args[0].(starlark.Bool)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Service.IgnoreSigpipe = bool(b)
+	return starlark.None, nil
+}
+
+func (p *SystemdServiceProxy) setStdout(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	b, ok := args[0].(starlark.Int)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	i, ok := b.Int64()
+	if !ok {
+		return starlark.None, errors.New("cannot represent argument as 64bit integer")
+	}
+	p.Service.Stdout = sysd.OutputSinks(i)
+	return starlark.None, nil
+}
+
+func (p *SystemdServiceProxy) setStderr(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	b, ok := args[0].(starlark.Int)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	i, ok := b.Int64()
+	if !ok {
+		return starlark.None, errors.New("cannot represent argument as 64bit integer")
+	}
+	p.Service.Stderr = sysd.OutputSinks(i)
+	return starlark.None, nil
+}
+
 // Attr implements starlark.Value.
 func (p *SystemdServiceProxy) Attr(name string) (starlark.Value, error) {
 	switch name {
@@ -472,18 +544,83 @@ func (p *SystemdServiceProxy) Attr(name string) (starlark.Value, error) {
 		return starlark.NewBuiltin("set_restart", p.setRestart), nil
 	case "restart_sec":
 		return starlark.MakeUint64(uint64(p.Service.RestartSec)), nil
+	case "set_restart_sec":
+		return starlark.NewBuiltin("set_restart_sec", p.setRestartSec), nil
 	case "timeout_stop_sec":
 		return starlark.MakeUint64(uint64(p.Service.TimeoutStopSec)), nil
+	case "set_timeout_stop_sec":
+		return starlark.NewBuiltin("set_timeout_stop_sec", p.setTimeoutStopSec), nil
 	case "watchdog_sec":
 		return starlark.MakeUint64(uint64(p.Service.WatchdogSec)), nil
+	case "set_watchdog_sec":
+		return starlark.NewBuiltin("set_watchdog_sec", p.setWatchdogSec), nil
+	case "ignore_sigpipe":
+		return starlark.Bool(p.Service.IgnoreSigpipe), nil
+	case "set_ignore_sigpipe":
+		return starlark.NewBuiltin("set_ignore_sigpipe", p.setIgnoreSigpipe), nil
+	case "stdout":
+		return starlark.MakeInt64(int64(p.Service.Stdout)), nil
+	case "set_stdout":
+		return starlark.NewBuiltin("set_stdout", p.setStdout), nil
+	case "stderr":
+		return starlark.MakeInt64(int64(p.Service.Stdout)), nil
+	case "set_stderr":
+		return starlark.NewBuiltin("set_stderr", p.setStderr), nil
 	}
 
 	return nil, starlark.NoSuchAttrError(
 		fmt.Sprintf("%s has no .%s attribute", p.Type(), name))
 }
 
+// SetField implements starlark.HasSetField.
+func (p *SystemdServiceProxy) SetField(name string, val starlark.Value) error {
+	switch name {
+	case "user":
+		_, err := p.setUser(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "group":
+		_, err := p.setGroup(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "type":
+		_, err := p.setType(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "kill_mode":
+		_, err := p.setKillMode(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "exec_start":
+		_, err := p.setExecStart(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "root_dir":
+		_, err := p.setRootDir(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "restart":
+		_, err := p.setRestart(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "restart_sec":
+		_, err := p.setRestartSec(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "timeout_stop_sec":
+		_, err := p.setTimeoutStopSec(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "watchdog_sec":
+		_, err := p.setWatchdogSec(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "ignore_sigpipe":
+		_, err := p.setIgnoreSigpipe(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "stdout":
+		_, err := p.setStdout(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "stderr":
+		_, err := p.setStderr(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	}
+	return errors.New("no such assignable field: " + name)
+}
+
 // AttrNames implements starlark.Value.
 func (p *SystemdServiceProxy) AttrNames() []string {
 	return []string{"type", "set_type", "exec_start", "set_exec_start", "root_dir", "set_root_dir", "kill_mode", "set_kill_mode",
-		"user", "set_user", "group", "set_group", "restart", "set_restart", "restart_sec", "timeout_stop_sec", "watchdog_sec"}
+		"user", "set_user", "group", "set_group", "restart", "set_restart", "restart_sec", "set_timeout_stop_sec", "timeout_stop_sec",
+		"set_watchdog_sec", "watchdog_sec", "set_ignore_sigpipe", "ignore_sigpipe", "stdout", "set_stdout", "stderr", "set_stderr"}
 }

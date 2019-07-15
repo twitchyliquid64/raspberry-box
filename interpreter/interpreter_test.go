@@ -228,7 +228,7 @@ test_hook(str(fs.read_partitions(args.arg(0))))`), "testScriptFsPartitionsPiImag
 	}
 }
 
-func TestBuildSysd(t *testing.T) {
+func TestBuildSysdUnit(t *testing.T) {
 	var out starlark.Tuple
 	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 		out = args
@@ -242,10 +242,11 @@ unit = systemd.Unit(
 )
 unit.description = "description yo"
 unit.append_required_by(["woooo"], "mate")
-serv = systemd.Service(exec_start="echo kek", restart="always", restart_sec="15s")
-serv.set_type(systemd.const.service_simple)
+
+serv = systemd.Service()
 unit.service = serv
-test_hook(unit, unit.description, unit.service)`), "testBuildSysd.box", nil, nil, testCb)
+
+test_hook(unit, unit.description, unit.service)`), "testBuildSysdUnit.box", nil, nil, testCb)
 	if err != nil {
 		t.Fatalf("makeScript() failed: %v", err)
 	}
@@ -265,20 +266,96 @@ test_hook(unit, unit.description, unit.service)`), "testBuildSysd.box", nil, nil
 	if got, want := out[0].(*SystemdUnitProxy).Unit.RequiredBy, []string{"woooo", "mate"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("out.Unit.RequiredBy = %v, want %v", got, want)
 	}
-
-	if got, want := out[2].(*SystemdServiceProxy).Service.Type, sysd.SimpleService; got != want {
-		t.Errorf("out.Service.Type = %v, want %v", got, want)
-	}
-	if got, want := out[2].(*SystemdServiceProxy).Service.ExecStart, "echo kek"; got != want {
-		t.Errorf("out.Service.ExecStart = %v, want %v", got, want)
-	}
-	if got, want := out[2].(*SystemdServiceProxy).Service.Restart, sysd.RestartAlways; got != want {
-		t.Errorf("out.Service.Restart = %v, want %v", got, want)
-	}
-	if got, want := out[2].(*SystemdServiceProxy).Service.RestartSec, time.Duration(15*time.Second); got != want {
-		t.Errorf("out.Service.RestartSec = %v, want %v", got, want)
-	}
 	if out[2].(*SystemdServiceProxy).Service != out[0].(*SystemdUnitProxy).Unit.Service {
 		t.Errorf("out.Unit.Service (%v) != out.Service (%v)", out[0].(*SystemdUnitProxy).Unit.Service, out[2].(*SystemdServiceProxy).Service)
+	}
+}
+
+func TestBuildSysdService(t *testing.T) {
+	var out starlark.Tuple
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		out = args
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+serv = systemd.Service(
+	type="wrong",
+	exec_start="echo kek",
+	restart="always",
+	restart_sec="15m",
+	user="wrong",
+	group="wrong",
+	kill_mode="wooooo",
+	stderr=88,
+	stdout=99,
+)
+serv.set_user("also wrong")
+serv.user = "root"
+serv.set_group("also wrong")
+serv.group = "root"
+serv.set_type(systemd.const.service_simple)
+serv.type = systemd.const.service_simple
+serv.set_kill_mode(serv.kill_mode)
+serv.kill_mode = systemd.const.killmode_controlgroup
+
+serv.set_restart_sec("15s")
+serv.restart_sec = serv.restart_sec
+serv.set_timeout_stop_sec("10m15s")
+serv.timeout_stop_sec = serv.timeout_stop_sec
+serv.set_watchdog_sec("2h")
+serv.watchdog_sec = serv.watchdog_sec
+
+serv.set_ignore_sigpipe(False)
+serv.ignore_sigpipe = True
+
+serv.set_stdout(systemd.out.console)
+serv.stdout = systemd.out.console + systemd.out.journal
+serv.set_stderr(systemd.out.console)
+serv.stderr = systemd.out.console + systemd.out.journal
+
+test_hook(serv)`), "testBuildSysdService.box", nil, nil, testCb)
+	if err != nil {
+		t.Fatalf("makeScript() failed: %v", err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if got, want := out[0].(*SystemdServiceProxy).Service.Type, sysd.SimpleService; got != want {
+		t.Errorf("out.Service.Type = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.ExecStart, "echo kek"; got != want {
+		t.Errorf("out.Service.ExecStart = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.User, "root"; got != want {
+		t.Errorf("out.Service.User = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.Group, "root"; got != want {
+		t.Errorf("out.Service.Group = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.Restart, sysd.RestartAlways; got != want {
+		t.Errorf("out.Service.Restart = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.RestartSec, time.Duration(15*time.Second); got != want {
+		t.Errorf("out.Service.RestartSec = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.TimeoutStopSec, time.Duration(10*time.Minute+15*time.Second); got != want {
+		t.Errorf("out.Service.TimeoutStopSec = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.WatchdogSec, time.Duration(2*time.Hour); got != want {
+		t.Errorf("out.Service.WatchdogSec = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.KillMode, sysd.KMControlGroup; got != want {
+		t.Errorf("out.Service.KillMode = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.IgnoreSigpipe, true; got != want {
+		t.Errorf("out.Service.IgnoreSigpipe = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.Stdout, sysd.OutputConsole|sysd.OutputJournal; got != want {
+		t.Errorf("out.Service.Stdout = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.Stderr, sysd.OutputConsole|sysd.OutputJournal; got != want {
+		t.Errorf("out.Service.Stderr = %v, want %v", got, want)
 	}
 }
