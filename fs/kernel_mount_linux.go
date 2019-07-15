@@ -19,6 +19,11 @@ type KMount struct {
 	needsUnmount bool
 }
 
+// Cat implements interpreter.FS.
+func (m *KMount) Cat(path string) ([]byte, error) {
+	return ioutil.ReadFile(filepath.Join(m.mntPoint, path))
+}
+
 // LStat implements sysd.FS.
 func (m *KMount) LStat(path string) (os.FileInfo, error) {
 	return os.Lstat(filepath.Join(m.mntPoint, path))

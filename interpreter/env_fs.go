@@ -205,6 +205,7 @@ func makeReadPartitions(s *Script) *starlark.Builtin {
 // FS describes an interface to the filesystem.
 type FS interface {
 	Close() error
+	Cat(path string) ([]byte, error)
 	Stat(path string) (os.FileInfo, error)
 	LStat(path string) (os.FileInfo, error)
 	Symlink(at, to string) error
@@ -255,12 +256,25 @@ func (p *FSMountProxy) Hash() (uint32, error) {
 
 // AttrNames implements starlark.Value.
 func (p *FSMountProxy) AttrNames() []string {
-	return []string{"base"}
+	return []string{"base", "cat"}
 }
 
 // Attr implements starlark.Value.
 func (p *FSMountProxy) Attr(name string) (starlark.Value, error) {
 	switch name {
+	case "cat":
+		return starlark.NewBuiltin("cat", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			if err := starlark.UnpackArgs("c", args, kwargs, "path", &path); err != nil {
+				return starlark.None, err
+			}
+
+			d, err := p.fs.Cat(string(path))
+			if err != nil {
+				return starlark.None, err
+			}
+			return starlark.String(string(d)), nil
+		}), nil
 	case "base":
 		return starlark.String(p.Path), nil
 	}

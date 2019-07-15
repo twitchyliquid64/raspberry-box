@@ -9,22 +9,11 @@ def fallback_img():
 
 # setup is called before build().
 def setup(img):
-    partitions = fs.read_partitions(img)
-    pi.assert_valid_partitions(partitions)
-
-    ext4 = fs.mnt_ext4(img, partitions[1])
-    fat = fs.mnt_vfat(img, partitions[0])
-    print(ext4, ext4.base)
-    print(fat, fat.base)
-
-    return struct(
-        img_path=img,
-        fat=fat,
-        ext4=ext4,
-        partitions=partitions,
-    )
+    image = pi.load_img(img)
+    return struct(image=image)
 
 # build is called to actually build the image.
 # The return value of setup() is passed to build().
 def build(setup):
-    pass
+    print("Hostname: %s" % setup.image.ext4.cat("/etc/hostname").strip())
+    print("Kernel command-line: %s" % setup.image.fat.cat("/cmdline.txt").strip())
