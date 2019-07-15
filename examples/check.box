@@ -1,18 +1,30 @@
 load('pi.lib', "pi")
 
-# fallback_template is called if no --template is provided to compute
+# fallback_template is called if no --img is provided to compute
 # the value.
-def fallback_template():
+def fallback_img():
     if not fs.exists("pi.img"):
-        crash("cannot find pi.img, and no --template image specified.")
+        crash("cannot find pi.img, and no --img image specified.")
     return "pi.img"
 
 # setup is called before build().
-def setup(template):
-    print("Using piLib v%d" % pi.library_version)
-    return {"template_path": template}
+def setup(img):
+    partitions = fs.read_partitions(img)
+    pi.assert_valid_partitions(partitions)
+
+    ext4 = fs.mnt_ext4(img, partitions[1])
+    fat = fs.mnt_vfat(img, partitions[0])
+    print(ext4, ext4.base)
+    print(fat, fat.base)
+
+    return struct(
+        img_path=img,
+        fat=fat,
+        ext4=ext4,
+        partitions=partitions,
+    )
 
 # build is called to actually build the image.
 # The return value of setup() is passed to build().
 def build(setup):
-    print(setup)
+    pass

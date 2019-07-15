@@ -10,9 +10,9 @@ import (
 )
 
 var (
-	script   = flag.String("script", "build.box", "Path to the box build file.")
-	template = flag.String("img", "", "Path to the base image file.")
-	verbose  = flag.Bool("verbose", false, "Enables verbose logging.")
+	script  = flag.String("script", "build.box", "Path to the box build file.")
+	img     = flag.String("img", "", "Path to the base image file.")
+	verbose = flag.Bool("verbose", false, "Enables verbose logging.")
 )
 
 func loadScript() ([]byte, error) {
@@ -48,15 +48,15 @@ func main() {
 
 func run(s *interpreter.Script) error {
 	defer s.Close()
-	if *template == "" {
+	if *img == "" {
 		var err error
-		*template, err = s.CallFn("fallback_template")
+		*img, err = s.CallFn("fallback_img")
 		if err != nil {
-			return fmt.Errorf("fallback_template() failed: %v", err)
+			return fmt.Errorf("fallback_img() failed: %v", err)
 		}
 	}
 
-	if err := s.Setup(*template); err != nil {
+	if err := s.Setup(*img); err != nil {
 		return fmt.Errorf("setup() failed: %v", err)
 	}
 	if err := s.Build(); err != nil {

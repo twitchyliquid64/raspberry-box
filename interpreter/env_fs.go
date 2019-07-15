@@ -1,9 +1,13 @@
 package interpreter
 
 import (
+	"crypto/sha256"
+	"errors"
+	"fmt"
 	"os"
 
 	"github.com/rekby/mbr"
+	"github.com/twitchyliquid64/raspberry-box/fs"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
 )
@@ -65,6 +69,100 @@ func fsBuiltins(s *Script) starlark.StringDict {
 				"mode":       starlark.MakeInt64(int64(s.Mode())),
 			}), nil
 		}),
+		"mnt_ext4": starlark.NewBuiltin("mnt_ext4", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			var part *starlarkstruct.Struct
+			if err := starlark.UnpackPositionalArgs("mnt_ext4", args, kwargs, 2, &path, &part); err != nil {
+				return starlark.None, err
+			}
+			if part == nil {
+				return starlark.None, errors.New("no partition information provided")
+			}
+
+			// Unpack partition information.
+			tmp, err := part.Attr("lba")
+			if err != nil {
+				return starlark.None, err
+			}
+			lba := tmp.(*starlarkstruct.Struct)
+			start, err := lba.Attr("start")
+			if err != nil {
+				return starlark.None, err
+			}
+			length, err := lba.Attr("length")
+			if err != nil {
+				return starlark.None, err
+			}
+
+			st, ok := start.(starlark.Int).Int64()
+			if !ok {
+				return starlark.None, errors.New("start is not an integer")
+			}
+			l, ok := length.(starlark.Int).Int64()
+			if !ok {
+				return starlark.None, errors.New("length is not an integer")
+			}
+
+			mnt, err := fs.KMountExt4(string(path), uint64(st)*512, uint64(l)*512)
+			if err != nil {
+				return starlark.None, err
+			}
+			out := &FSMountProxy{
+				Kind: "Ext4",
+				Path: string(path),
+				fs:   mnt,
+			}
+
+			s.resources = append(s.resources, out)
+			return out, nil
+		}),
+		"mnt_vfat": starlark.NewBuiltin("mnt_vfat", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			var part *starlarkstruct.Struct
+			if err := starlark.UnpackPositionalArgs("mnt_vfat", args, kwargs, 2, &path, &part); err != nil {
+				return starlark.None, err
+			}
+			if part == nil {
+				return starlark.None, errors.New("no partition information provided")
+			}
+
+			// Unpack partition information.
+			tmp, err := part.Attr("lba")
+			if err != nil {
+				return starlark.None, err
+			}
+			lba := tmp.(*starlarkstruct.Struct)
+			start, err := lba.Attr("start")
+			if err != nil {
+				return starlark.None, err
+			}
+			length, err := lba.Attr("length")
+			if err != nil {
+				return starlark.None, err
+			}
+
+			st, ok := start.(starlark.Int).Int64()
+			if !ok {
+				return starlark.None, errors.New("start is not an integer")
+			}
+			l, ok := length.(starlark.Int).Int64()
+			if !ok {
+				return starlark.None, errors.New("length is not an integer")
+			}
+
+			mnt, err := fs.KMountVFat(string(path), uint64(st)*512, uint64(l)*512)
+			if err != nil {
+				return starlark.None, err
+			}
+			out := &FSMountProxy{
+				Kind: "VFAT",
+				Path: string(path),
+				fs:   mnt,
+			}
+
+			s.resources = append(s.resources, out)
+			return out, nil
+		}),
 	}
 }
 
@@ -102,4 +200,71 @@ func makeReadPartitions(s *Script) *starlark.Builtin {
 
 		return starlark.NewList(parts), nil
 	})
+}
+
+// FS describes an interface to the filesystem.
+type FS interface {
+	Close() error
+	Stat(path string) (os.FileInfo, error)
+	LStat(path string) (os.FileInfo, error)
+	Symlink(at, to string) error
+	Mkdir(at string) error
+	Write(path string, data []byte, perms os.FileMode) error
+}
+
+// FSMountProxy proxies access to a mounted filesystem.
+type FSMountProxy struct {
+	Kind     string
+	Path     string
+	fs       FS
+	isClosed bool
+}
+
+// Close implements io.Closer.
+func (p *FSMountProxy) Close() error {
+	if p.isClosed {
+		return nil
+	}
+	p.isClosed = true
+	return p.fs.Close()
+}
+
+func (p *FSMountProxy) String() string {
+	return fmt.Sprintf("fs.%sMount{%p}", p.Kind, p)
+}
+
+// Type implements starlark.Value.
+func (p *FSMountProxy) Type() string {
+	return fmt.Sprintf("fs.%sMount", p.Kind)
+}
+
+// Freeze implements starlark.Value.
+func (p *FSMountProxy) Freeze() {
+}
+
+// Truth implements starlark.Value.
+func (p *FSMountProxy) Truth() starlark.Bool {
+	return starlark.Bool(true)
+}
+
+// Hash implements starlark.Value.
+func (p *FSMountProxy) Hash() (uint32, error) {
+	h := sha256.Sum256([]byte(p.String()))
+	return uint32(uint32(h[0]) + uint32(h[1])<<8 + uint32(h[2])<<16 + uint32(h[3])<<24), nil
+}
+
+// AttrNames implements starlark.Value.
+func (p *FSMountProxy) AttrNames() []string {
+	return []string{"base"}
+}
+
+// Attr implements starlark.Value.
+func (p *FSMountProxy) Attr(name string) (starlark.Value, error) {
+	switch name {
+	case "base":
+		return starlark.String(p.Path), nil
+	}
+
+	return nil, starlark.NoSuchAttrError(
+		fmt.Sprintf("%s has no .%s attribute", p.Type(), name))
 }
