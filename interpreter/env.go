@@ -12,7 +12,7 @@ func generateEnvironment(s *Script) (starlark.StringDict, error) {
 	t, m := stdlibBuiltins()
 	g := starlark.StringDict{
 		"crash": starlark.NewBuiltin("crash", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
-			return nil, errors.New("soft crash")
+			return nil, errors.New("soft crash: " + args[0].String())
 		}),
 		"struct":   starlark.NewBuiltin("struct", starlarkstruct.Make),
 		"args":     starlarkstruct.FromStringDict(starlarkstruct.Default, argBuiltins(s)),

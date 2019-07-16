@@ -1,7 +1,8 @@
 package lib
 
 var piLib = []byte(`
-library_version = 1
+load("unix.lib", "configure_hostname", "set_shadow_password")
+library_version = 2
 
 def assert_valid_partitions(parts):
   if len(parts) < 3:
@@ -39,8 +40,8 @@ def configure_dynamic_ethernet(image, lease_seconds=60*60*12, hostname=None):
   config = net.DHCPClient(profiles = [dynamic])
   image.ext4.write('/etc/dhcpcd.conf', str(config), fs.perms.default)
 
-def configure_hostname(image, hostname):
-  image.ext4.write('/etc/hostname', str(hostname).strip() + '\n', fs.perms.default)
+def configure_pi_hostname(image, hostname):
+  configure_hostname(image.ext4, hostname)
 
 def enable_ssh(image):
   image.fat.write('ssh', '', fs.perms.default)
@@ -51,24 +52,12 @@ def cmdline(image):
 def disable_resize(image):
   image.fat.write("/cmdline.txt", cmdline(image).replace('init=/usr/lib/raspi-config/init_resize.sh', ''), fs.perms.default)
   if image.ext4.exists('etc/init.d/resize2fs_once'):
-    print('Deleting: %s' % 'etc/init.d/resize2fs_once')
     image.ext4.remove('etc/init.d/resize2fs_once')
   if image.ext4.exists('ext4_mnt/etc/rc3.d/S01resize2fs_once'):
-    print('Deleting: %s' % 'ext4_mnt/etc/rc3.d/S01resize2fs_once')
     image.ext4.remove('ext4_mnt/etc/rc3.d/S01resize2fs_once')
 
 def configure_pi_password(image, password):
-  shadow_data = image.ext4.cat("/etc/shadow")
-  shadow_perm = image.ext4.stat("/etc/shadow").mode
-  new_shadow_data = ''
-
-  for line in shadow_data.splitlines(True):
-    if line.startswith('pi:'):
-      spl = line.split(':')
-      new_shadow_data += spl[0] + ':' + crypt.unix_hash(password) + ':' + ':'.join(spl[2:])
-    else:
-      new_shadow_data += line
-  image.ext4.write('/etc/shadow', new_shadow_data, shadow_perm)
+  set_shadow_password(image.ext4, "pi", password)
 
 pi = struct(
   library_version=library_version,
@@ -76,7 +65,7 @@ pi = struct(
   load_img=load_img,
   configure_static_ethernet=configure_static_ethernet,
   configure_dynamic_ethernet=configure_dynamic_ethernet,
-  configure_hostname=configure_hostname,
+  configure_hostname=configure_pi_hostname,
   enable_ssh=enable_ssh,
   cmdline=cmdline,
   disable_resize=disable_resize,
