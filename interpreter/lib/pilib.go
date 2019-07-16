@@ -78,6 +78,31 @@ def configure_dynamic_ethernet(image, lease_seconds=60*60*12, hostname=None):
   image.ext4.write('/etc/dhcpcd.conf', str(config), fs.perms.default)
 
 
+
+
+def run_on_boot(image, name, cmdLine, user='', group=''):
+  if not name.endswith('.service'):
+    name += '.service'
+  s = systemd.Service(
+  	exec_start=cmdLine,
+  	restart=systemd.const.restart_never,
+    user=user,
+    group=group,
+    stdout=systemd.out.console + systemd.out.journal,
+    stderr=systemd.out.console + systemd.out.journal,
+  )
+  s.kill_mode = systemd.const.killmode_controlgroup
+  s.ignore_sigpipe = True
+
+  systemd.install(image.ext4, name, systemd.Unit(
+    service=s,
+  	description="run on startup",
+  	after=['basic.target'],
+    required_by=['multi-user.target'],
+  ))
+  if not systemd.is_enabled_on_target(image.ext4, name, 'multi-user.target'):
+    systemd.enable_target(image.ext4, name, 'multi-user.target')
+
 pi = struct(
   library_version=library_version,
   assert_valid_partitions=assert_valid_partitions,
@@ -90,4 +115,5 @@ pi = struct(
   disable_resize=disable_resize,
   configure_pi_password=configure_pi_password,
   configure_wifi_network=configure_wifi_network,
+  run_on_boot=run_on_boot,
 )`)

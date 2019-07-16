@@ -41,7 +41,7 @@ func TestSystemdService(t *testing.T) {
 				KillMode:     KMControlGroup,
 				Restart:      RestartNever,
 			},
-			out: "[Service]\nType=notify\nKillMode=control-group\nRestart=no\nNotifyAccess=all\nIgnoreSIGPIPE=no\nStandardOutput=console\n",
+			out: "[Service]\nType=notify\nKillMode=control-group\nRestart=no\nNotifyAccess=all\nIgnoreSIGPIPE=no\nStandardOutput=journal+console\n",
 		},
 		{
 			name: "conditions",

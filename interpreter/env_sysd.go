@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/twitchyliquid64/raspberry-box/conf/sysd"
+	sd "github.com/twitchyliquid64/raspberry-box/sysd"
 	"go.starlark.net/starlark"
 	"go.starlark.net/starlarkstruct"
 )
@@ -188,6 +189,72 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 				Kind: "ConditionHost",
 				Arg:  string(path),
 			}, nil
+		}),
+		"install": starlark.NewBuiltin("install", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var name starlark.String
+			var f, u starlark.Value
+			if err := starlark.UnpackArgs("install", args, kwargs, "fs", &f, "name", &name, "unit", &u); err != nil {
+				return starlark.None, err
+			}
+
+			fs, ok := f.(*FSMountProxy)
+			if !ok {
+				return starlark.None, fmt.Errorf("unit parameter must be of type systemd.Unit, got %T", f)
+			}
+
+			unit, ok := u.(*SystemdUnitProxy)
+			if !ok {
+				return starlark.None, fmt.Errorf("unit parameter must be of type systemd.Unit, got %T", u)
+			}
+
+			return starlark.None, sd.Install(fs.fs, string(name), unit.Unit, true)
+		}),
+		"is_installed": starlark.NewBuiltin("is_installed", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var unit starlark.String
+			var f starlark.Value
+			if err := starlark.UnpackArgs("is_installed", args, kwargs, "fs", &f, "unit", &unit); err != nil {
+				return starlark.None, err
+			}
+
+			fs, ok := f.(*FSMountProxy)
+			if !ok {
+				return starlark.None, fmt.Errorf("fs parameter must be of type fs.Mount, got %T", f)
+			}
+			enabled, err := sd.Exists(fs.fs, string(unit))
+			if err != nil {
+				return starlark.None, err
+			}
+			return starlark.Bool(enabled), nil
+		}),
+		"enable_target": starlark.NewBuiltin("enable_target", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var unit, target starlark.String
+			var f starlark.Value
+			if err := starlark.UnpackArgs("enable_target", args, kwargs, "fs", &f, "unit", &unit, "target", &target); err != nil {
+				return starlark.None, err
+			}
+
+			fs, ok := f.(*FSMountProxy)
+			if !ok {
+				return starlark.None, fmt.Errorf("fs parameter must be of type fs.Mount, got %T", f)
+			}
+			return starlark.None, sd.Enable(fs.fs, string(unit), string(target))
+		}),
+		"is_enabled_on_target": starlark.NewBuiltin("is_enabled_on_target", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var unit, target starlark.String
+			var f starlark.Value
+			if err := starlark.UnpackArgs("is_enabled_on_target", args, kwargs, "fs", &f, "unit", &unit, "target", &target); err != nil {
+				return starlark.None, err
+			}
+
+			fs, ok := f.(*FSMountProxy)
+			if !ok {
+				return starlark.None, fmt.Errorf("fs parameter must be of type fs.Mount, got %T", f)
+			}
+			enabled, err := sd.IsEnabledOnTarget(fs.fs, string(unit), string(target))
+			if err != nil {
+				return starlark.None, err
+			}
+			return starlark.Bool(enabled), nil
 		}),
 	}
 }

@@ -99,7 +99,7 @@ func (o OutputSinks) String() string {
 			ident: "inherit",
 		},
 	} {
-		if opt.mask&OutputConsole != 0 {
+		if opt.mask&o != 0 {
 			if i > 0 {
 				out.WriteString("+")
 			}
