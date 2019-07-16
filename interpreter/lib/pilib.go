@@ -20,25 +20,7 @@ def load_img(img):
   fat = fs.mnt_vfat(img, partitions[0])
   return struct(ext4=ext4,fat=fat)
 
-def configure_static_ethernet(image, address=None, router=None, dns='8.8.8.8'):
-  static = net.StaticProfile(
-    interface='eth0',
-    network=address,
-    routers=[router],
-    dns=[dns],
-  )
-  config = net.DHCPClient(profiles = [static])
-  image.ext4.write('/etc/dhcpcd.conf', str(config), fs.perms.default)
 
-def configure_dynamic_ethernet(image, lease_seconds=60*60*12, hostname=None):
-  dynamic = net.DHCPProfile(
-    interface='eth0',
-    lease_seconds=lease_seconds,
-  )
-  if hostname:
-    dynamic.set_hostname(hostname)
-  config = net.DHCPClient(profiles = [dynamic])
-  image.ext4.write('/etc/dhcpcd.conf', str(config), fs.perms.default)
 
 def configure_pi_hostname(image, hostname):
   configure_hostname(image.ext4, hostname)
@@ -59,6 +41,43 @@ def disable_resize(image):
 def configure_pi_password(image, password):
   set_shadow_password(image.ext4, "pi", password)
 
+
+
+def configure_wifi_network(image, ssid, password):
+  confMode = image.ext4.stat('/etc/wpa_supplicant/wpa_supplicant.conf').mode
+  c = net.wifi.SupplicantConfig(
+  	control_interface='/run/wpa_supplicant',
+  	allow_update_config = True,
+  	country_code='US',
+  	device_name='wlan0',
+  	networks=[net.wifi.Network(
+    	ssid = ssid,
+    	psk = password,
+    )],
+  )
+  image.ext4.write('/etc/wpa_supplicant/wpa_supplicant.conf', str(c), confMode)
+
+def configure_static_ethernet(image, address=None, router=None, dns='8.8.8.8'):
+  static = net.StaticProfile(
+    interface='eth0',
+    network=address,
+    routers=[router],
+    dns=[dns],
+  )
+  config = net.DHCPClient(profiles = [static])
+  image.ext4.write('/etc/dhcpcd.conf', str(config), fs.perms.default)
+
+def configure_dynamic_ethernet(image, lease_seconds=60*60*12, hostname=None):
+  dynamic = net.DHCPProfile(
+    interface='eth0',
+    lease_seconds=lease_seconds,
+  )
+  if hostname:
+    dynamic.set_hostname(hostname)
+  config = net.DHCPClient(profiles = [dynamic])
+  image.ext4.write('/etc/dhcpcd.conf', str(config), fs.perms.default)
+
+
 pi = struct(
   library_version=library_version,
   assert_valid_partitions=assert_valid_partitions,
@@ -70,4 +89,5 @@ pi = struct(
   cmdline=cmdline,
   disable_resize=disable_resize,
   configure_pi_password=configure_pi_password,
+  configure_wifi_network=configure_wifi_network,
 )`)
