@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	cnet "github.com/twitchyliquid64/raspberry-box/conf/net"
 	"github.com/twitchyliquid64/raspberry-box/conf/sysd"
 	"go.starlark.net/starlark"
 )
@@ -57,7 +58,7 @@ test_hook(pi.library_version)`), "testNewScript.box", nil, nil, false, testCb)
 		t.Error("script is nil")
 	}
 
-	if cVersion != "1" {
+	if cVersion != "2" {
 		t.Errorf("cVersion = %v, want %v", cVersion, 1)
 	}
 }
@@ -536,5 +537,118 @@ test_hook(c)`), "testBuildNetDHCPCD.box", nil, nil, false, testCb)
 	}
 	if got, want := out[0].(*DHCPClientConfProxy).Conf.Sections[1].InterfaceName, "wlan0"; got != want {
 		t.Errorf("out.Sections[0].InterfaceName = %v, want %v", got, want)
+	}
+}
+
+func TestBuildNetWifiNetwork(t *testing.T) {
+	var out starlark.Tuple
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		out = args
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+n = net.wifi.Network(
+	ssid = 'test',
+	psk = 'woooooo',
+)
+n.set_ssid(n.ssid)
+n.ssid = n.ssid + ' network'
+n.set_disabled(not n.disabled)
+n.disabled = n.disabled
+n.set_psk(n.psk)
+n.psk = n.psk
+test_hook(n)`), "testBuildNetWifiNetwork.box", nil, nil, false, testCb)
+	if err != nil {
+		t.Fatalf("makeScript() failed: %v", err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if got, want := int(out[0].(*WifiNetworkProxy).Conf.Mode), 0; got != want {
+		t.Errorf("out.Mode = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*WifiNetworkProxy).Conf.Disabled, true; got != want {
+		t.Errorf("out.Disabled = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*WifiNetworkProxy).Conf.SSID, "test network"; got != want {
+		t.Errorf("out.SSID = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*WifiNetworkProxy).Conf.PSK, "woooooo"; got != want {
+		t.Errorf("out.PSK = %v, want %v", got, want)
+	}
+}
+
+func TestBuildNetWifiConfig(t *testing.T) {
+	var out starlark.Tuple
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		out = args
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+n1 = net.wifi.Network(
+	ssid = 'test',
+	psk = 'woooooo',
+)
+
+c = net.wifi.SupplicantConfig(
+	control_interface='/run/wpa_supplicant',
+	allow_update_config = True,
+	country_code='US',
+	device_name='wlan0',
+	networks=[n1],
+)
+
+n2 = net.wifi.Network(
+	ssid = 'nope',
+	disabled = True,
+	psk = 'aaa',
+)
+c.networks = c.networks
+c.set_networks([c.networks[0], n2])
+
+c.set_control_interface(c.control_interface)
+c.control_interface = c.control_interface
+c.set_allow_update_config(not c.allow_update_config)
+c.allow_update_config = not c.allow_update_config
+c.country_code = c.country_code + 'aaaa'
+c.set_country_code(c.country_code[0:2])
+c.device_name = c.device_name + '121'
+c.set_device_name(c.device_name[0:5])
+
+test_hook(c)`), "testBuildNetWifiConfig.box", nil, nil, false, testCb)
+	if err != nil {
+		t.Fatalf("makeScript() failed: %v", err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if got, want := out[0].(*WifiConfigurationProxy).Conf.CtrlInterface, "/run/wpa_supplicant"; got != want {
+		t.Errorf("out.CtrlInterface = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*WifiConfigurationProxy).Conf.CountryCode, "US"; got != want {
+		t.Errorf("out.CountryCode = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*WifiConfigurationProxy).Conf.AllowUpdateConfig, true; got != want {
+		t.Errorf("out.AllowUpdateConfig = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*WifiConfigurationProxy).Conf.DeviceName, "wlan0"; got != want {
+		t.Errorf("out.DeviceName = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*WifiConfigurationProxy).Conf.Networks, []cnet.WPASupplicantNetwork{
+		{
+			SSID: "test",
+			PSK:  "woooooo",
+		},
+		{
+			SSID:     "nope",
+			Disabled: true,
+			PSK:      "aaa",
+		},
+	}; !reflect.DeepEqual(got, want) {
+		t.Errorf("out.Networks = %v, want %v", got, want)
 	}
 }
