@@ -13,6 +13,29 @@ import (
 
 func netBuiltins(s *Script) starlark.StringDict {
 	return starlark.StringDict{
+		"DHCPClient": starlark.NewBuiltin("DHCPClient", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var controlgroup starlark.String
+			var profiles *starlark.List
+			if err := starlark.UnpackArgs("DHCPClient", args, kwargs, "control_group?", &controlgroup, "profiles", &profiles); err != nil {
+				return starlark.None, err
+			}
+			p := &DHCPClientConfProxy{
+				Conf: &net.DHCPClientConf{
+					ControlGroup: string(controlgroup),
+				},
+			}
+			// Unpack profiles.
+			if profiles != nil {
+				for i := 0; i < profiles.Len(); i++ {
+					s, ok := profiles.Index(i).(*DHCPProfileProxy)
+					if !ok {
+						return starlark.None, fmt.Errorf("profiles[%d] is not a net.DHCPProfile or net.StaticProfile", i)
+					}
+					p.Conf.Sections = append(p.Conf.Sections, *s.Profile)
+				}
+			}
+			return p, nil
+		}),
 		"DHCPProfile": starlark.NewBuiltin("DHCPProfile", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 			var name, interf, hostname starlark.String
 			var leaseSeconds starlark.Int
@@ -94,7 +117,7 @@ func netBuiltins(s *Script) starlark.StringDict {
 	}
 }
 
-// DHCPProfileProxy proxies access to a mounted filesystem.
+// DHCPProfileProxy proxies access to DHCP profile structure.
 type DHCPProfileProxy struct {
 	Kind    string
 	Profile *net.DHCPClientProfile
@@ -368,6 +391,102 @@ func (p *DHCPProfileProxy) SetField(name string, val starlark.Value) error {
 		return err
 	case "network":
 		_, err := p.setNetwork(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	}
+	return errors.New("no such assignable field: " + name)
+}
+
+// DHCPClientConfProxy proxies access to DHCPClientConf structure.
+type DHCPClientConfProxy struct {
+	Conf *net.DHCPClientConf
+}
+
+func (p *DHCPClientConfProxy) String() string {
+	return p.Conf.String()
+}
+
+// Type implements starlark.Value.
+func (p *DHCPClientConfProxy) Type() string {
+	return fmt.Sprintf("net.DHCPClient")
+}
+
+// Freeze implements starlark.Value.
+func (p *DHCPClientConfProxy) Freeze() {
+}
+
+// Truth implements starlark.Value.
+func (p *DHCPClientConfProxy) Truth() starlark.Bool {
+	return starlark.Bool(true)
+}
+
+// Hash implements starlark.Value.
+func (p *DHCPClientConfProxy) Hash() (uint32, error) {
+	h := sha256.Sum256([]byte(p.String()))
+	return uint32(uint32(h[0]) + uint32(h[1])<<8 + uint32(h[2])<<16 + uint32(h[3])<<24), nil
+}
+
+// AttrNames implements starlark.Value.
+func (p *DHCPClientConfProxy) AttrNames() []string {
+	return []string{"control_group", "set_control_group", "profiles", "set_profiles"}
+}
+
+// Attr implements starlark.Value.
+func (p *DHCPClientConfProxy) Attr(name string) (starlark.Value, error) {
+	switch name {
+	case "control_group":
+		return starlark.String(p.Conf.ControlGroup), nil
+	case "set_control_group":
+		return starlark.NewBuiltin("set_control_group", p.setControlGroup), nil
+
+	case "profiles":
+		var out []starlark.Value
+		for _, s := range p.Conf.Sections {
+			out = append(out, &DHCPProfileProxy{Profile: &s})
+		}
+		return starlark.NewList(out), nil
+	case "set_profiles":
+		return starlark.NewBuiltin("set_profiles", p.setProfiles), nil
+
+	}
+
+	return nil, starlark.NoSuchAttrError(
+		fmt.Sprintf("%s has no .%s attribute", p.Type(), name))
+}
+
+func (p *DHCPClientConfProxy) setControlGroup(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Conf.ControlGroup = string(s)
+	return starlark.None, nil
+}
+
+func (p *DHCPClientConfProxy) setProfiles(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	profiles, ok := args[0].(*starlark.List)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	var out []net.DHCPClientProfile
+	for i := 0; i < profiles.Len(); i++ {
+		prof, ok := profiles.Index(i).(*DHCPProfileProxy)
+		if !ok {
+			return starlark.None, fmt.Errorf("profiles[%d] is not a string", i)
+		}
+		out = append(out, *prof.Profile)
+	}
+	p.Conf.Sections = out
+	return starlark.None, nil
+}
+
+// SetField implements starlark.HasSetField.
+func (p *DHCPClientConfProxy) SetField(name string, val starlark.Value) error {
+	switch name {
+	case "profiles":
+		_, err := p.setProfiles(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "control_group":
+		_, err := p.setControlGroup(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
 		return err
 	}
 	return errors.New("no such assignable field: " + name)

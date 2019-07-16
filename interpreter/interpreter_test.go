@@ -492,3 +492,49 @@ test_hook(c, c.name)`), "testBuildNetStaticProfile.box", nil, nil, false, testCb
 		t.Errorf("out.Static.DNS = %v, want %v", got, want)
 	}
 }
+
+func TestBuildNetDHCPCD(t *testing.T) {
+	var out starlark.Tuple
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		out = args
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+s = net.StaticProfile(
+	interface = "eth0",
+	network = "192.168.1.5/24",
+	broadcast = "192.168.1.111",
+	routers = ['192.168.1.1'],
+	dns = ['8.8.8.8'],
+)
+
+c = net.DHCPClient(
+	control_group='wheelie',
+	profiles = [s],
+)
+
+c.set_control_group(c.control_group[:5])
+c.control_group = c.control_group
+
+d = net.DHCPProfile(interface='wlan0', hostname='pi1')
+c.profiles = [c.profiles[0], d]
+
+test_hook(c)`), "testBuildNetDHCPCD.box", nil, nil, false, testCb)
+	if err != nil {
+		t.Fatalf("makeScript() failed: %v", err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if got, want := out[0].(*DHCPClientConfProxy).Conf.ControlGroup, "wheel"; got != want {
+		t.Errorf("out.ControlGroup = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPClientConfProxy).Conf.Sections[0].InterfaceName, "eth0"; got != want {
+		t.Errorf("out.Sections[0].InterfaceName = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPClientConfProxy).Conf.Sections[1].InterfaceName, "wlan0"; got != want {
+		t.Errorf("out.Sections[0].InterfaceName = %v, want %v", got, want)
+	}
+}
