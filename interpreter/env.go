@@ -20,6 +20,7 @@ func generateEnvironment(s *Script) (starlark.StringDict, error) {
 		"math":     starlarkstruct.FromStringDict(starlarkstruct.Default, m),
 		"fs":       starlarkstruct.FromStringDict(starlarkstruct.Default, fsBuiltins(s)),
 		"systemd":  starlarkstruct.FromStringDict(starlarkstruct.Default, sysdBuiltins(s)),
+		"net":      starlarkstruct.FromStringDict(starlarkstruct.Default, netBuiltins(s)),
 		"compiler": starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{"version": starlark.MakeInt64(starlark.CompilerVersion)}),
 	}
 
