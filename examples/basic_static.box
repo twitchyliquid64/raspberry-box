@@ -1,0 +1,17 @@
+load('pi.lib', "pi")
+
+# setup is called before build().
+def setup(img):
+    image = pi.load_img(img)
+    return struct(image=image)
+
+# build is called to actually build the image.
+# The return value of setup() is passed to build().
+def build(setup):
+    pi.configure_hostname(setup.image, 'static_example')
+    pi.disable_resize(setup.image)
+    pi.configure_static_ethernet(setup.image, address='192.168.1.5/24', router='192.168.1.1')
+
+    print("Hostname: %s" % setup.image.ext4.cat("/etc/hostname").strip())
+    cmdline = pi.cmdline(setup.image)
+    print("Kernel command-line: %s" % cmdline)

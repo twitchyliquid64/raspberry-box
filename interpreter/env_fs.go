@@ -226,6 +226,7 @@ type FS interface {
 	Symlink(at, to string) error
 	Mkdir(at string) error
 	Write(path string, data []byte, perms os.FileMode) error
+	Remove(path string) error
 }
 
 // FSMountProxy proxies access to a mounted filesystem.
@@ -271,12 +272,28 @@ func (p *FSMountProxy) Hash() (uint32, error) {
 
 // AttrNames implements starlark.Value.
 func (p *FSMountProxy) AttrNames() []string {
-	return []string{"base", "cat", "stat", "mkdir", "write"}
+	return []string{"base", "cat", "exists", "stat", "mkdir", "write", "remove"}
 }
 
 // Attr implements starlark.Value.
 func (p *FSMountProxy) Attr(name string) (starlark.Value, error) {
 	switch name {
+	case "exists":
+		return starlark.NewBuiltin("exists", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			if err := starlark.UnpackArgs("exists", args, kwargs, "path", &path); err != nil {
+				return starlark.None, err
+			}
+
+			_, err := p.fs.Stat(string(path))
+			if err != nil {
+				if os.IsNotExist(err) {
+					return starlark.Bool(false), nil
+				}
+				return starlark.None, err
+			}
+			return starlark.Bool(true), nil
+		}), nil
 	case "stat":
 		return starlark.NewBuiltin("stat", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 			var path starlark.String
@@ -335,6 +352,14 @@ func (p *FSMountProxy) Attr(name string) (starlark.Value, error) {
 				return starlark.None, errors.New("permissions must be an unsigned integer")
 			}
 			return starlark.None, p.fs.Write(string(path), []byte(data), os.FileMode(permInt))
+		}), nil
+	case "remove":
+		return starlark.NewBuiltin("remove", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			if err := starlark.UnpackArgs("remove", args, kwargs, "path", &path); err != nil {
+				return starlark.None, err
+			}
+			return starlark.None, p.fs.Remove(string(path))
 		}), nil
 	case "base":
 		return starlark.String(p.Path), nil
