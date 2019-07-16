@@ -22,6 +22,7 @@ func generateEnvironment(s *Script) (starlark.StringDict, error) {
 		"systemd":  starlarkstruct.FromStringDict(starlarkstruct.Default, sysdBuiltins(s)),
 		"net":      starlarkstruct.FromStringDict(starlarkstruct.Default, netBuiltins(s)),
 		"compiler": starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{"version": starlark.MakeInt64(starlark.CompilerVersion)}),
+		"crypt":    starlarkstruct.FromStringDict(starlarkstruct.Default, cryptBuiltins(s)),
 	}
 
 	if s.testHook != nil {

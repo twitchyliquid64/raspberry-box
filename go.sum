@@ -8,6 +8,8 @@ github.com/go-errors/errors v1.0.1 h1:LUHzmkK3GUKUrL/1gfBUxAHzcev3apQlezX/+O7ma6
 github.com/go-errors/errors v1.0.1/go.mod h1:f4zRHt4oKfwPJE5k8C9vpYG+aDHdBFUsgrm6/TyX73Q=
 github.com/rekby/mbr v0.0.0-20190325193910-2b19b9cdeebc h1:LIhcsQ01OzuCmjqcggpWhs8GBGNqVPycFbBpY3suBbI=
 github.com/rekby/mbr v0.0.0-20190325193910-2b19b9cdeebc/go.mod h1:omSwqul59wlKxf3OVbxhOiSjxM1at3GsfDbgnghKyeA=
+github.com/tredoe/osutil v0.0.0-20161130133508-7d3ee1afa71c h1:5q7IHeqvAA4hWR1CfpTOS7RFsTDC36TaSZ8Dvc00bPk=
+github.com/tredoe/osutil v0.0.0-20161130133508-7d3ee1afa71c/go.mod h1:M/I710pXKQToMdqt/D+mJ4QsnW6WDaajyB6DWFmDXBs=
 go.starlark.net v0.0.0-20190712141925-d6561f809f31 h1:9Zpgup3RPEXCojiBC4mBm5ZHPDpgEFCzXqTbwGC/A38=
 go.starlark.net v0.0.0-20190712141925-d6561f809f31/go.mod h1:c1/X6cHgvdXj6pUlmWKMkuqRnW4K8x2vwt6JAaaircg=
 golang.org/x/crypto v0.0.0-20190308221718-c2843e01d9a2/go.mod h1:djNgcEr1/C05ACkg1iLfiJU5Ep61QUkGW8qpdssI0+w=

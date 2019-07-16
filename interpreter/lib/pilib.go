@@ -57,6 +57,19 @@ def disable_resize(image):
     print('Deleting: %s' % 'ext4_mnt/etc/rc3.d/S01resize2fs_once')
     image.ext4.remove('ext4_mnt/etc/rc3.d/S01resize2fs_once')
 
+def configure_pi_password(image, password):
+  shadow_data = image.ext4.cat("/etc/shadow")
+  shadow_perm = image.ext4.stat("/etc/shadow").mode
+  new_shadow_data = ''
+
+  for line in shadow_data.splitlines(True):
+    if line.startswith('pi:'):
+      spl = line.split(':')
+      new_shadow_data += spl[0] + ':' + crypt.unix_hash(password) + ':' + ':'.join(spl[2:])
+    else:
+      new_shadow_data += line
+  image.ext4.write('/etc/shadow', new_shadow_data, shadow_perm)
+
 pi = struct(
   library_version=library_version,
   assert_valid_partitions=assert_valid_partitions,
@@ -67,4 +80,5 @@ pi = struct(
   enable_ssh=enable_ssh,
   cmdline=cmdline,
   disable_resize=disable_resize,
+  configure_pi_password=configure_pi_password,
 )`)
