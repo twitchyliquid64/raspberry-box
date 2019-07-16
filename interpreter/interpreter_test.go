@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"net"
 	"reflect"
 	"testing"
 	"time"
@@ -392,5 +393,102 @@ test_hook(c, c.arg)`), "testBuildSysdCondition.box", nil, nil, false, testCb)
 	}
 	if got, want := string(out[1].(starlark.String)), "aaaa"; got != want {
 		t.Errorf("out[1] = %v, want %v", got, want)
+	}
+}
+
+func TestBuildNetDHCPProfile(t *testing.T) {
+	var out starlark.Tuple
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		out = args
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+c = net.DHCPProfile(
+	name = "dhcp test",
+	lease_seconds=10,
+	hostname="kek",
+	dns=True,
+)
+c.set_lease_seconds(25)
+c.set_client_id(True)
+test_hook(c, c.name)`), "testBuildNetDHCPProfile.box", nil, nil, false, testCb)
+	if err != nil {
+		t.Fatalf("makeScript() failed: %v", err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if got, want := out[0].(*DHCPProfileProxy).Profile.DHCP.LeaseSeconds, 25; got != want {
+		t.Errorf("out.DHCP.LeaseSeconds = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.DHCP.Hostname, "kek"; got != want {
+		t.Errorf("out.DHCP.Hostname = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.DHCP.PresentHostname, true; got != want {
+		t.Errorf("out.DHCP.PresentHostname = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.DHCP.ClientID, true; got != want {
+		t.Errorf("out.DHCP.ClientID = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.DHCP.SetupDNS, true; got != want {
+		t.Errorf("out.DHCP.SetupDNS = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.DHCP.RequestNTP, false; got != want {
+		t.Errorf("out.DHCP.RequestNTP = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.ProfileName, string(out[1].(starlark.String)); got != want {
+		t.Errorf("out.ProfileName = %v, want %v", got, want)
+	}
+}
+
+func TestBuildNetStaticProfile(t *testing.T) {
+	var out starlark.Tuple
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		out = args
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+c = net.StaticProfile(
+	interface = "eth0",
+	network = "192.168.1.77/24",
+	broadcast = "192.168.1.111",
+	routers = ['192.168.1.55'],
+	dns = ['1.1.1.1'],
+)
+c.set_network(c.network)
+c.network = '192.168.1.5/24'
+c.set_broadcast("192.168.1.255")
+c.set_routers(c.routers)
+c.routers = ['192.168.1.1']
+c.set_dns(c.dns)
+c.dns = ['8.8.8.8']
+test_hook(c, c.name)`), "testBuildNetStaticProfile.box", nil, nil, false, testCb)
+	if err != nil {
+		t.Fatalf("makeScript() failed: %v", err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if got, want := out[0].(*DHCPProfileProxy).Profile.InterfaceName, "eth0"; got != want {
+		t.Errorf("out.InterfaceName = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.Static.Network, (net.IPNet{
+		IP:   net.ParseIP("192.168.1.5"),
+		Mask: net.CIDRMask(24, 32),
+	}); !reflect.DeepEqual(got, want) {
+		t.Errorf("out.Static.Network = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.Static.Broadcast, net.ParseIP("192.168.1.255"); !reflect.DeepEqual(got, want) {
+		t.Errorf("out.Static.Broadcast = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.Static.Routers, []net.IP{net.ParseIP("192.168.1.1")}; !reflect.DeepEqual(got, want) {
+		t.Errorf("out.Static.Routers = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*DHCPProfileProxy).Profile.Static.DNS, []string{"8.8.8.8"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("out.Static.DNS = %v, want %v", got, want)
 	}
 }
