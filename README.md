@@ -34,16 +34,14 @@ def setup(img):
     return struct(image=image)
 
 # build is called to actually build the image.
-# The return value of setup() is passed to build().
 def build(setup):
     pi.configure_hostname(setup.image, 'my-pi')
     pi.enable_ssh(setup.image)
     pi.configure_static_ethernet(setup.image, address='192.168.1.5/24', router='192.168.1.1')
     pi.configure_pi_password(setup.image, password='whelp')
-    pi.configure_wifi_network(setup.image, ssid='test',password='network')
+    pi.configure_wifi_network(setup.image, ssid='test', password='network')
 
-    pi.run_on_boot(setup.image, 'custom-print', '/bin/echo Custom script stated yo!!!!!!!!!!!')
-
+    pi.run_on_boot(setup.image, 'custom-print', '/bin/echo Custom script started yo!!!!!!!!!!!')
 ```
 
 **Run rbox**
