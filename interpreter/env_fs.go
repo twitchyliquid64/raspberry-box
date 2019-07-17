@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 
 	"github.com/rekby/mbr"
@@ -40,6 +41,18 @@ func fsBuiltins(s *Script) starlark.StringDict {
 				return starlark.None, err
 			}
 			return starlark.Bool(true), nil
+		}),
+		"cat": starlark.NewBuiltin("cat", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			if err := starlark.UnpackArgs("cat", args, kwargs, "path", &path); err != nil {
+				return starlark.None, err
+			}
+
+			d, err := ioutil.ReadFile(string(path))
+			if err != nil {
+				return starlark.None, err
+			}
+			return starlark.String(d), nil
 		}),
 		"enums": starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
 			"partitions": starlarkstruct.FromStringDict(starlarkstruct.Default, partEnums),
