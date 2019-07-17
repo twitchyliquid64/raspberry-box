@@ -3,6 +3,24 @@ package lib
 var unixLib = []byte(`
 library_version = 1
 
+def user_list(mount):
+  out = []
+  pwd = mount.cat("/etc/passwd")
+  for line in pwd.splitlines():
+    spl = line.split(':')
+    if len(spl) > 4:
+      out.append(struct(
+        user=spl[0],
+        pass_info=spl[1],
+        uid=int(spl[2]),
+        gid=int(spl[3]),
+        info=spl[4],
+      ))
+  return out
+
+def users(mount):
+  return {x.user: x for x in user_list(mount)}
+
 def configure_hostname(mount, hostname):
   mount.write('/etc/hostname', str(hostname).strip() + '\n', fs.perms.default)
 

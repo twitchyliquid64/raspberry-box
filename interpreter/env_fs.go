@@ -227,6 +227,9 @@ type FS interface {
 	Mkdir(at string) error
 	Write(path string, data []byte, perms os.FileMode) error
 	Remove(path string) error
+	RemoveAll(path string) error
+	Chmod(path string, mode os.FileMode) error
+	Chown(path string, uid, gid int) error
 }
 
 // FSMountProxy proxies access to a mounted filesystem.
@@ -272,7 +275,8 @@ func (p *FSMountProxy) Hash() (uint32, error) {
 
 // AttrNames implements starlark.Value.
 func (p *FSMountProxy) AttrNames() []string {
-	return []string{"base", "cat", "exists", "stat", "mkdir", "write", "remove"}
+	return []string{"base", "cat", "exists", "stat", "mkdir", "write",
+		"remove", "remove_all", "chmod", "chown"}
 }
 
 // Attr implements starlark.Value.
@@ -360,6 +364,44 @@ func (p *FSMountProxy) Attr(name string) (starlark.Value, error) {
 				return starlark.None, err
 			}
 			return starlark.None, p.fs.Remove(string(path))
+		}), nil
+	case "remove_all":
+		return starlark.NewBuiltin("remove_all", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			if err := starlark.UnpackArgs("remove_all", args, kwargs, "path", &path); err != nil {
+				return starlark.None, err
+			}
+			return starlark.None, p.fs.RemoveAll(string(path))
+		}), nil
+	case "chmod":
+		return starlark.NewBuiltin("chmod", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			var mode starlark.Int
+			if err := starlark.UnpackArgs("chmod", args, kwargs, "path", &path, "mode", &mode); err != nil {
+				return starlark.None, err
+			}
+			modeInt, ok := mode.Uint64()
+			if !ok {
+				return starlark.None, errors.New("mode argument must be an unsigned integer")
+			}
+			return starlark.None, p.fs.Chmod(string(path), os.FileMode(modeInt))
+		}), nil
+	case "chown":
+		return starlark.NewBuiltin("chown", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			var uid, gid starlark.Int
+			if err := starlark.UnpackArgs("chown", args, kwargs, "path", &path, "uid", &uid, "gid", &gid); err != nil {
+				return starlark.None, err
+			}
+			uidI, ok := uid.Uint64()
+			if !ok {
+				return starlark.None, errors.New("uid argument must be an unsigned integer")
+			}
+			gidI, ok := gid.Uint64()
+			if !ok {
+				return starlark.None, errors.New("gid argument must be an unsigned integer")
+			}
+			return starlark.None, p.fs.Chown(string(path), int(uidI), int(gidI))
 		}), nil
 	case "base":
 		return starlark.String(p.Path), nil

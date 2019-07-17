@@ -1,4 +1,5 @@
 load('pi.lib', "pi")
+load('unix.lib', 'users')
 
 # fallback_img is called if no --img is provided to compute
 # the value.
@@ -17,3 +18,4 @@ def setup(img):
 def build(setup):
     print("Hostname: %s" % setup.image.ext4.cat("/etc/hostname").strip())
     print("Kernel command-line: %s" % setup.image.fat.cat("/cmdline.txt").strip())
+    print("User information: %s" % str(users(setup.image.ext4)))

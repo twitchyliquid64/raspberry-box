@@ -29,6 +29,21 @@ func (m *KMount) Remove(path string) error {
 	return os.Remove(filepath.Join(m.mntPoint, path))
 }
 
+// RemoveAll implements interpreter.FS.
+func (m *KMount) RemoveAll(path string) error {
+	return os.RemoveAll(filepath.Join(m.mntPoint, path))
+}
+
+// Chmod implements interpreter.FS.
+func (m *KMount) Chmod(path string, mode os.FileMode) error {
+	return os.Chmod(filepath.Join(m.mntPoint, path), mode)
+}
+
+// Chown implements interpreter.FS.
+func (m *KMount) Chown(path string, uid, gid int) error {
+	return os.Chown(filepath.Join(m.mntPoint, path), uid, gid)
+}
+
 // LStat implements sysd.FS.
 func (m *KMount) LStat(path string) (os.FileInfo, error) {
 	return os.Lstat(filepath.Join(m.mntPoint, path))

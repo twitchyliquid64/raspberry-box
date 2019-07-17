@@ -172,7 +172,6 @@ func TestMathBuiltins(t *testing.T) {
 				code += "))"
 			}
 
-			t.Logf("code = %q", code)
 			_, err := makeScript([]byte(code), "testMathBuiltins_"+tc.name+".box", nil, nil, false, testCb)
 			if err != nil {
 				t.Fatalf("makeScript() failed: %v", err)
