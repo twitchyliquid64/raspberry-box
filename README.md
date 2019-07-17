@@ -1,6 +1,8 @@
 # raspberry-box
 
-A lightweight tool to customize a raspberry pi image.
+A lightweight tool to customize a raspberry pi image on Linux.
+
+Some notable features:
 
  * Setup wireless networks to connect to
  * Setup static or DHCP configuration
@@ -13,11 +15,13 @@ A lightweight tool to customize a raspberry pi image.
 
  ## Quickstart
 
-**Install rbox**
+**Install rbox from source**
+
+Make sure you have the Go compiler installed first.
 
  ```shell
- go install github.com/twitchyliquid64/raspberry-box/rbox
-
+go get github.com/twitchyliquid64/raspberry-box/rbox
+go build -o rbox github.com/twitchyliquid64/raspberry-box/rbox # Creates ./rbox
  ```
 
 **Write out a config**
