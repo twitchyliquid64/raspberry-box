@@ -33,6 +33,16 @@ func TestSystemdService(t *testing.T) {
 			out: "[Service]\nRestart=always\nRestartSec=5s\nIgnoreSIGPIPE=no\nStandardOutput=console\n",
 		},
 		{
+			name: "exec cmds",
+			inp: Service{
+				ExecStart:    "/bin/echo yolo",
+				ExecStop:     "reboot",
+				ExecStartPre: "/bin/echo starting",
+				Stdout:       OutputConsole,
+			},
+			out: "[Service]\nExecStartPre=/bin/echo starting\nExecStart=/bin/echo yolo\nExecStop=reboot\nIgnoreSIGPIPE=no\nStandardOutput=console\n",
+		},
+		{
 			name: "complex",
 			inp: Service{
 				NotifyAccess: NotifyAllProcs,

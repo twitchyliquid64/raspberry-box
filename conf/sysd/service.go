@@ -128,6 +128,11 @@ type Service struct {
 	KillMode    KillMode
 	User, Group string
 
+	ExecReload   string
+	ExecStop     string
+	ExecStartPre string
+	ExecStopPost string
+
 	TimeoutStopSec time.Duration
 	Restart        RestartMode
 	RestartSec     time.Duration
@@ -150,9 +155,23 @@ func (s *Service) String() string {
 	if s.Type != "" {
 		out.WriteString(fmt.Sprintf("Type=%s\n", s.Type))
 	}
+
+	if s.ExecStartPre != "" {
+		out.WriteString(fmt.Sprintf("ExecStartPre=%s\n", s.ExecStartPre))
+	}
 	if s.ExecStart != "" {
 		out.WriteString(fmt.Sprintf("ExecStart=%s\n", s.ExecStart))
 	}
+	if s.ExecReload != "" {
+		out.WriteString(fmt.Sprintf("ExecReload=%s\n", s.ExecReload))
+	}
+	if s.ExecStop != "" {
+		out.WriteString(fmt.Sprintf("ExecStop=%s\n", s.ExecStop))
+	}
+	if s.ExecStopPost != "" {
+		out.WriteString(fmt.Sprintf("ExecStopPost=%s\n", s.ExecStopPost))
+	}
+
 	if s.RootDir != "" {
 		out.WriteString(fmt.Sprintf("RootDirectory=%s\n", s.RootDir))
 	}

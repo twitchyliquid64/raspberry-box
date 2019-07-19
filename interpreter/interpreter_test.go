@@ -283,6 +283,7 @@ func TestBuildSysdService(t *testing.T) {
 serv = systemd.Service(
 	type="wrong",
 	exec_start="echo kek",
+	exec_stop="echo ending",
 	restart="always",
 	restart_sec="15m",
 	user="wrong",
@@ -299,6 +300,15 @@ serv.set_type(systemd.const.service_simple)
 serv.type = systemd.const.service_simple
 serv.set_kill_mode(serv.kill_mode)
 serv.kill_mode = systemd.const.killmode_controlgroup
+
+serv.exec_reload = serv.exec_reload
+serv.set_exec_reload('aaa')
+serv.exec_stop = serv.exec_stop
+serv.set_exec_stop(serv.exec_stop)
+serv.exec_start_pre = serv.exec_start_pre
+serv.set_exec_start_pre(serv.exec_start_pre)
+serv.exec_stop_post = serv.exec_stop_post
+serv.set_exec_stop_post(serv.exec_stop_post)
 
 serv.set_restart_sec("15s")
 serv.restart_sec = serv.restart_sec

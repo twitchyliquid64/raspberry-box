@@ -265,6 +265,42 @@ func (p *SystemdServiceProxy) setUser(thread *starlark.Thread, fn *starlark.Buil
 	return starlark.None, nil
 }
 
+func (p *SystemdServiceProxy) setExecReload(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Service.ExecReload = string(s)
+	return starlark.None, nil
+}
+
+func (p *SystemdServiceProxy) setExecStop(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Service.ExecStop = string(s)
+	return starlark.None, nil
+}
+
+func (p *SystemdServiceProxy) setExecStartPre(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Service.ExecStartPre = string(s)
+	return starlark.None, nil
+}
+
+func (p *SystemdServiceProxy) setExecStopPost(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Service.ExecStopPost = string(s)
+	return starlark.None, nil
+}
+
 func (p *SystemdServiceProxy) setGroup(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	s, ok := args[0].(starlark.String)
 	if !ok {
@@ -380,10 +416,28 @@ func (p *SystemdServiceProxy) Attr(name string) (starlark.Value, error) {
 		return starlark.String(p.Service.Type), nil
 	case "set_type":
 		return starlark.NewBuiltin("set_type", p.setType), nil
+
 	case "exec_start":
 		return starlark.String(p.Service.ExecStart), nil
 	case "set_exec_start":
 		return starlark.NewBuiltin("set_exec_start", p.setExecStart), nil
+	case "exec_reload":
+		return starlark.String(p.Service.ExecReload), nil
+	case "set_exec_reload":
+		return starlark.NewBuiltin("set_exec_reload", p.setExecReload), nil
+	case "exec_stop":
+		return starlark.String(p.Service.ExecStop), nil
+	case "set_exec_stop":
+		return starlark.NewBuiltin("set_exec_stop", p.setExecStop), nil
+	case "exec_start_pre":
+		return starlark.String(p.Service.ExecStartPre), nil
+	case "set_exec_start_pre":
+		return starlark.NewBuiltin("set_exec_start_pre", p.setExecStartPre), nil
+	case "exec_stop_post":
+		return starlark.String(p.Service.ExecStopPost), nil
+	case "set_exec_stop_post":
+		return starlark.NewBuiltin("set_exec_stop_post", p.setExecStopPost), nil
+
 	case "root_dir":
 		return starlark.String(p.Service.RootDir), nil
 	case "set_root_dir":
@@ -469,6 +523,18 @@ func (p *SystemdServiceProxy) SetField(name string, val starlark.Value) error {
 	case "exec_start":
 		_, err := p.setExecStart(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
 		return err
+	case "exec_reload":
+		_, err := p.setExecReload(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "exec_stop":
+		_, err := p.setExecStop(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "exec_start_pre":
+		_, err := p.setExecStartPre(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "exec_stop_post":
+		_, err := p.setExecStopPost(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
 	case "root_dir":
 		_, err := p.setRootDir(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
 		return err
@@ -503,7 +569,8 @@ func (p *SystemdServiceProxy) SetField(name string, val starlark.Value) error {
 // AttrNames implements starlark.Value.
 func (p *SystemdServiceProxy) AttrNames() []string {
 	return []string{"type", "set_type", "exec_start", "set_exec_start", "root_dir", "set_root_dir", "kill_mode", "set_kill_mode",
-		"user", "set_user", "group", "set_group", "restart", "set_restart", "restart_sec", "set_timeout_stop_sec", "timeout_stop_sec",
+		"user", "set_user", "group", "set_group", "exec_reload", "set_exec_reload", "exec_stop", "set_exec_stop", "exec_start_pre", "set_exec_start_pre",
+		"exec_stop_post", "set_exec_stop_post", "restart", "set_restart", "restart_sec", "set_timeout_stop_sec", "timeout_stop_sec",
 		"set_watchdog_sec", "watchdog_sec", "set_ignore_sigpipe", "ignore_sigpipe", "stdout", "set_stdout", "stderr", "set_stderr",
 		"conditions", "set_conditions"}
 }
