@@ -125,6 +125,7 @@ type Service struct {
 	Type        ServiceType
 	ExecStart   string
 	RootDir     string
+	WorkingDir  string
 	KillMode    KillMode
 	User, Group string
 
@@ -174,6 +175,9 @@ func (s *Service) String() string {
 
 	if s.RootDir != "" {
 		out.WriteString(fmt.Sprintf("RootDirectory=%s\n", s.RootDir))
+	}
+	if s.WorkingDir != "" {
+		out.WriteString(fmt.Sprintf("WorkingDirectory=%s\n", s.WorkingDir))
 	}
 	if s.KillMode != "" {
 		out.WriteString(fmt.Sprintf("KillMode=%s\n", s.KillMode))

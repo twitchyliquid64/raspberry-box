@@ -325,6 +325,9 @@ serv.stdout = systemd.out.console + systemd.out.journal
 serv.set_stderr(systemd.out.console)
 serv.stderr = systemd.out.console + systemd.out.journal
 
+serv.set_working_dir('aaaa')
+serv.working_dir = 'a' + serv.working_dir + 'b'
+
 serv.set_conditions([systemd.ConditionExists("/bin/systemd"), systemd.ConditionHost("aaa")])
 serv.conditions = [systemd.ConditionNotExists("/bin/systemd"), serv.conditions[0], serv.conditions[1]]
 
@@ -362,6 +365,9 @@ test_hook(serv)`), "testBuildSysdService.box", nil, nil, false, testCb)
 	}
 	if got, want := out[0].(*SystemdServiceProxy).Service.KillMode, sysd.KMControlGroup; got != want {
 		t.Errorf("out.Service.KillMode = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdServiceProxy).Service.WorkingDir, "aaaaab"; got != want {
+		t.Errorf("out.Service.WorkingDir = %v, want %v", got, want)
 	}
 	if got, want := out[0].(*SystemdServiceProxy).Service.IgnoreSigpipe, true; got != want {
 		t.Errorf("out.Service.IgnoreSigpipe = %v, want %v", got, want)

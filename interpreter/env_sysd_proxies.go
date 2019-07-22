@@ -238,6 +238,15 @@ func (p *SystemdServiceProxy) setExecStart(thread *starlark.Thread, fn *starlark
 	return starlark.None, nil
 }
 
+func (p *SystemdServiceProxy) setWorkingDir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Service.WorkingDir = string(s)
+	return starlark.None, nil
+}
+
 func (p *SystemdServiceProxy) setRootDir(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 	s, ok := args[0].(starlark.String)
 	if !ok {
@@ -438,6 +447,10 @@ func (p *SystemdServiceProxy) Attr(name string) (starlark.Value, error) {
 	case "set_exec_stop_post":
 		return starlark.NewBuiltin("set_exec_stop_post", p.setExecStopPost), nil
 
+	case "working_dir":
+		return starlark.String(p.Service.WorkingDir), nil
+	case "set_working_dir":
+		return starlark.NewBuiltin("set_working_dir", p.setWorkingDir), nil
 	case "root_dir":
 		return starlark.String(p.Service.RootDir), nil
 	case "set_root_dir":
@@ -535,6 +548,9 @@ func (p *SystemdServiceProxy) SetField(name string, val starlark.Value) error {
 	case "exec_stop_post":
 		_, err := p.setExecStopPost(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
 		return err
+	case "working_dir":
+		_, err := p.setWorkingDir(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
 	case "root_dir":
 		_, err := p.setRootDir(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
 		return err
@@ -568,7 +584,7 @@ func (p *SystemdServiceProxy) SetField(name string, val starlark.Value) error {
 
 // AttrNames implements starlark.Value.
 func (p *SystemdServiceProxy) AttrNames() []string {
-	return []string{"type", "set_type", "exec_start", "set_exec_start", "root_dir", "set_root_dir", "kill_mode", "set_kill_mode",
+	return []string{"type", "set_type", "exec_start", "set_exec_start", "root_dir", "set_root_dir", "kill_mode", "set_kill_mode", "working_dir",
 		"user", "set_user", "group", "set_group", "exec_reload", "set_exec_reload", "exec_stop", "set_exec_stop", "exec_start_pre", "set_exec_start_pre",
 		"exec_stop_post", "set_exec_stop_post", "restart", "set_restart", "restart_sec", "set_timeout_stop_sec", "timeout_stop_sec",
 		"set_watchdog_sec", "watchdog_sec", "set_ignore_sigpipe", "ignore_sigpipe", "stdout", "set_stdout", "stderr", "set_stderr",

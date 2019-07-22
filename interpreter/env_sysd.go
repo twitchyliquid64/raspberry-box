@@ -103,16 +103,16 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 
 		"Service": starlark.NewBuiltin("Service", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 			var (
-				t, execStart, rootDir, usr, grp starlark.String
-				execReload, execStop            starlark.String
-				execStartPre, execStopPost      starlark.String
-				killMode, restart               starlark.String
-				restartSec, timeoutStopSec      starlark.Value
-				watchdogSec                     starlark.Value
-				ignoreSigpipe                   starlark.Bool
-				stderr, stdout                  starlark.Int
+				t, execStart, rootDir, usr, grp  starlark.String
+				execReload, execStop, workingDir starlark.String
+				execStartPre, execStopPost       starlark.String
+				killMode, restart                starlark.String
+				restartSec, timeoutStopSec       starlark.Value
+				watchdogSec                      starlark.Value
+				ignoreSigpipe                    starlark.Bool
+				stderr, stdout                   starlark.Int
 			)
-			if err := starlark.UnpackArgs("Service", args, kwargs, "type?", &t, "exec_start", &execStart,
+			if err := starlark.UnpackArgs("Service", args, kwargs, "type?", &t, "exec_start", &execStart, "working_dir", &workingDir,
 				"root_dir", &rootDir, "user", &usr, "group", &grp, "exec_reload", &execReload, "exec_stop", &execStop,
 				"exec_start_pre", &execStartPre, "exec_stop_post", &execStopPost, "restart", &restart,
 				"kill_mode", &killMode, "timeout_stop_sec", &timeoutStopSec, "restart_sec", &restartSec,
@@ -125,6 +125,7 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 				Type:          sysd.ServiceType(t),
 				ExecStart:     string(execStart),
 				RootDir:       string(rootDir),
+				WorkingDir:    string(workingDir),
 				User:          string(usr),
 				Group:         string(grp),
 				KillMode:      sysd.KillMode(killMode),
