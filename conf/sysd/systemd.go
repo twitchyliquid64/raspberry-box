@@ -12,6 +12,7 @@ type Unit struct {
 	After       []string
 
 	Service *Service
+	Mount   *Mount
 
 	WantedBy   []string
 	RequiredBy []string
@@ -31,6 +32,9 @@ func (u *Unit) String() string {
 
 	if u.Service != nil {
 		out.WriteString(u.Service.String())
+		out.WriteString("\n")
+	} else if u.Mount != nil {
+		out.WriteString(u.Mount.String())
 		out.WriteString("\n")
 	}
 

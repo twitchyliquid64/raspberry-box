@@ -101,6 +101,22 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 			}, nil
 		}),
 
+		"Mount": starlark.NewBuiltin("Mount", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var whatPath, wherePath, fsType starlark.String
+			if err := starlark.UnpackArgs("Mount", args, kwargs, "what_path?", &whatPath, "where_path", &wherePath, "fs_type",
+				&fsType); err != nil {
+				return starlark.None, err
+			}
+			out := sysd.Mount{
+				WhatPath:  string(whatPath),
+				WherePath: string(wherePath),
+				FSType:    string(fsType),
+			}
+			return &SystemdMountProxy{
+				Conf: &out,
+			}, nil
+		}),
+
 		"Service": starlark.NewBuiltin("Service", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 			var (
 				t, execStart, rootDir, usr, grp  starlark.String

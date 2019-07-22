@@ -412,6 +412,37 @@ test_hook(c, c.arg)`), "testBuildSysdCondition.box", nil, nil, false, testCb)
 	}
 }
 
+func TestBuildSysdMount(t *testing.T) {
+	var out starlark.Tuple
+	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+		out = args
+		return starlark.None, nil
+	}
+
+	s, err := makeScript([]byte(`
+m = systemd.Mount(what_path='/dev/sda', where_path='/mnt/kek')
+m.set_what_path(m.what_path + '3')
+m.what_path = m.what_path
+
+m.set_where_path(m.where_path + '2')
+m.where_path = m.where_path
+
+test_hook(m)`), "testBuildSysdCondition.box", nil, nil, false, testCb)
+	if err != nil {
+		t.Fatalf("makeScript() failed: %v", err)
+	}
+	if s == nil {
+		t.Error("script is nil")
+	}
+
+	if got, want := out[0].(*SystemdMountProxy).Conf.WhatPath, "/dev/sda3"; got != want {
+		t.Errorf("out.WhatPath = %v, want %v", got, want)
+	}
+	if got, want := out[0].(*SystemdMountProxy).Conf.WherePath, "/mnt/kek2"; got != want {
+		t.Errorf("out.WherePath = %v, want %v", got, want)
+	}
+}
+
 func TestBuildNetDHCPProfile(t *testing.T) {
 	var out starlark.Tuple
 	testCb := func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {

@@ -636,3 +636,101 @@ func (p *SystemdConditionProxy) Attr(name string) (starlark.Value, error) {
 	return nil, starlark.NoSuchAttrError(
 		fmt.Sprintf("%s has no .%s attribute", p.Type(), name))
 }
+
+// SystemdMountProxy proxies access to a mount structure.
+type SystemdMountProxy struct {
+	Conf *sysd.Mount
+}
+
+func (p *SystemdMountProxy) String() string {
+	return fmt.Sprintf("systemd.Mount{%p}", p)
+}
+
+// Type implements starlark.Value.
+func (p *SystemdMountProxy) Type() string {
+	return "systemd.Mount"
+}
+
+// Freeze implements starlark.Value.
+func (p *SystemdMountProxy) Freeze() {
+}
+
+// Truth implements starlark.Value.
+func (p *SystemdMountProxy) Truth() starlark.Bool {
+	return starlark.Bool(true)
+}
+
+// Hash implements starlark.Value.
+func (p *SystemdMountProxy) Hash() (uint32, error) {
+	h := sha256.Sum256([]byte(p.String()))
+	return uint32(uint32(h[0]) + uint32(h[1])<<8 + uint32(h[2])<<16 + uint32(h[3])<<24), nil
+}
+
+// AttrNames implements starlark.Value.
+func (p *SystemdMountProxy) AttrNames() []string {
+	return []string{"what_path", "where_path", "fs_type", "set_what_path", "set_where_path", "set_fs_type"}
+}
+
+func (p *SystemdMountProxy) setWhatPath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Conf.WhatPath = string(s)
+	return starlark.None, nil
+}
+
+func (p *SystemdMountProxy) setWherePath(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Conf.WherePath = string(s)
+	return starlark.None, nil
+}
+
+func (p *SystemdMountProxy) setFSType(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+	s, ok := args[0].(starlark.String)
+	if !ok {
+		return starlark.None, fmt.Errorf("cannot handle argument 0 which has unhandled type %T", args[0])
+	}
+	p.Conf.FSType = string(s)
+	return starlark.None, nil
+}
+
+// Attr implements starlark.Value.
+func (p *SystemdMountProxy) Attr(name string) (starlark.Value, error) {
+	switch name {
+	case "what_path":
+		return starlark.String(p.Conf.WhatPath), nil
+	case "set_what_path":
+		return starlark.NewBuiltin("set_what_path", p.setWhatPath), nil
+	case "where_path":
+		return starlark.String(p.Conf.WherePath), nil
+	case "set_where_path":
+		return starlark.NewBuiltin("set_where_path", p.setWherePath), nil
+	case "fs_type":
+		return starlark.String(p.Conf.FSType), nil
+	case "set_fs_type":
+		return starlark.NewBuiltin("set_fs_type", p.setFSType), nil
+	}
+
+	return nil, starlark.NoSuchAttrError(
+		fmt.Sprintf("%s has no .%s attribute", p.Type(), name))
+}
+
+// SetField implements starlark.HasSetField.
+func (p *SystemdMountProxy) SetField(name string, val starlark.Value) error {
+	switch name {
+	case "what_path":
+		_, err := p.setWhatPath(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "where_path":
+		_, err := p.setWherePath(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	case "fs_type":
+		_, err := p.setFSType(nil, nil, starlark.Tuple([]starlark.Value{val}), nil)
+		return err
+	}
+	return errors.New("no such assignable field: " + name)
+}

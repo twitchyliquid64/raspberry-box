@@ -102,3 +102,32 @@ func TestSystemdUnit(t *testing.T) {
 		})
 	}
 }
+
+func TestSystemdMount(t *testing.T) {
+	tcs := []struct {
+		name string
+		inp  Mount
+		out  string
+	}{
+		{
+			name: "empty",
+			out:  "[Mount]\n",
+		},
+		{
+			name: "basic",
+			inp: Mount{
+				WhatPath:  "/dev/sda4",
+				WherePath: "/mounts/alt-drive",
+			},
+			out: "[Mount]\nWhat=/dev/sda4\nWhere=/mounts/alt-drive\n",
+		},
+	}
+
+	for _, tc := range tcs {
+		t.Run(tc.name, func(t *testing.T) {
+			if tc.out != tc.inp.String() {
+				t.Errorf("out = %q, want %q", tc.inp.String(), tc.out)
+			}
+		})
+	}
+}
