@@ -10,3 +10,5 @@ require (
 	go.starlark.net v0.0.0-20190712141925-d6561f809f31
 	golang.org/x/net v0.0.0-20190628185345-da137c7871d7 // indirect
 )
+
+go 1.13

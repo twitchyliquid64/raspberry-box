@@ -1,0 +1,30 @@
+platform: linux
+
+image_resource:
+  type: docker-image
+  source:
+    repository: golang
+    tag: 'buster'
+
+inputs:
+- name: raspberry-box
+  path: .
+
+outputs:
+- name: output
+
+run:
+  path: sh
+  args:
+  - -ec
+  - |
+    bash ci/debian-install-base.sh
+    echo ========================================
+    go version
+    go build -v -o output/rbox rbox/main.go
+    mkdir pkg
+    mkdir           -pv pkg/DEBIAN
+    mkdir           -pv pkg/usr/bin
+    cp ci/control       pkg/DEBIAN/control
+    cp output/rbox      pkg/usr/bin
+    dpkg-deb --build pkg ./output
