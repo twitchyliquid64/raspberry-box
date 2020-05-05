@@ -142,3 +142,41 @@ The name should be relatively unique, and only consist of lowercase letters and 
 
 Under the hood, this method generates a systemd unit + service, and installs it in the raspberry Pi image as a requirement
 to the `multi-user.target` target.
+
+### Installing/copying a file
+
+```python
+# Read the contents of the file at /tmp/on_host
+d = fs.cat('/tmp/on_host')
+# Write the file into /tmp/in_image within the Pi image, with perms 0755.
+setup.image.ext4.write('/tmp/in_image', d, fs.perms.default)
+```
+
+
+### Installing a custom systemd service
+
+This block of code runs the program `/bin/THINGY` on startup, once the network
+has come up. Standard output from the program is logged to the console and
+syslog, and if the program terminates it is restarted 5 seconds later.
+
+```python
+unit = systemd.Unit(
+    description="Runs the THINGY daemon.",
+    after=["network-online.target"],
+    required_by=['multi-user.target'],
+    service=systemd.Service(
+        type=systemd.const.service_exec,
+        exec_start="/bin/THINGY some arguments here lol whatever",
+        restart="always",
+        restart_sec="5s",
+        user="root",
+        group="root",
+        kill_mode=systemd.const.killmode_controlgroup,
+        stdout=systemd.out.console + systemd.out.journal,
+        ignore_sigpipe=True,
+    ),
+)
+systemd.install(setup.image.ext4, 'thingy.service', unit)
+if not systemd.is_enabled_on_target(setup.image.ext4, 'thingy.service', 'multi-user.target'):
+    systemd.enable_target(setup.image.ext4, 'thingy.service', 'multi-user.target')
+```
