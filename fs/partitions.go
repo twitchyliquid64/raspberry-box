@@ -3,6 +3,7 @@ package fs
 
 import (
 	"fmt"
+	"os/exec"
 
 	"github.com/rekby/mbr"
 )
@@ -39,5 +40,12 @@ func CheckPiPartitionTable(t *mbr.MBR) error {
 		}
 	}
 
+	return nil
+}
+
+func ExpandImage(path string, partition int) error {
+	if err := exec.Command("parted", "-s", path, "resizepart", fmt.Sprint(partition), "100%").Run(); err != nil {
+		return fmt.Errorf("parted: %v", err)
+	}
 	return nil
 }

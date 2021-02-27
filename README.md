@@ -76,13 +76,16 @@ When you invoke `rbox` with your config, it will call two functions:
 Shortcuts for performing basic tasks (like setting the hostname) are provided for you in `pilib`, so using them is the
 simplest way to get started.
 
-#### `load_img(<path>)`
+#### `load_img(<path>, [<min-mb>])`
 
 This function loads as raspberry pi image at the specified path, checks its partitions, and mounts both partitions.
 The return value is a structure with two fields:
 
 1. `.ext4` - The ext4 partition (main system files)
 2. `.fat` - The fat partition (kernel command line, boot partition, etc)
+
+If the image is smaller than the specified size in Megabytes, it will be re-sized, with the additional space being
+added to the ext4 partition.
 
 #### `configure_pi_hostname(<image>, <hostname>)`
 
@@ -150,6 +153,8 @@ to the `multi-user.target` target.
 d = fs.cat('/tmp/on_host')
 # Write the file into /tmp/in_image within the Pi image, with perms 0755.
 setup.image.ext4.write('/tmp/in_image', d, fs.perms.default)
+# You can also use the semantics of the cp -R command:
+setup.image.ext4.copy_into('/tmp/on_host', '/tmp/in_image')
 ```
 
 
@@ -180,3 +185,7 @@ systemd.install(setup.image.ext4, 'thingy.service', unit)
 if not systemd.is_enabled_on_target(setup.image.ext4, 'thingy.service', 'multi-user.target'):
     systemd.enable_target(setup.image.ext4, 'thingy.service', 'multi-user.target')
 ```
+
+### Run FS tests
+
+go test -o /tmp/fs.test -v -c ./fs && sudo /tmp/fs.test --pi-img test.img

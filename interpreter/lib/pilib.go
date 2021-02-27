@@ -13,10 +13,19 @@ def assert_valid_partitions(parts):
   if parts[1].type_name != "Native Linux":
     crash("expected second partition to be Native Linux, got " + parts[1].type_name)
 
-def load_img(img):
+def load_img(img, min_mb=None):
+  do_resize = False
+  if min_mb:
+    cur_size = fs.stat(img).size
+    if cur_size < (min_mb * 1024 * 1024):
+      print('Existing image is too small (%sMb < %sMb), resizing' % (str(cur_size // 1024 // 1024), str(min_mb)))
+      fs.truncate(img, min_mb * 1024 * 1024)
+      fs.expand_partition(img, partition=2)
+      do_resize = True
+
   partitions = fs.read_partitions(img)
   assert_valid_partitions(partitions)
-  ext4 = fs.mnt_ext4(img, partitions[1])
+  ext4 = fs.mnt_ext4(img, partitions[1], do_resize)
   fat = fs.mnt_vfat(img, partitions[0])
   return struct(ext4=ext4,fat=fat)
 

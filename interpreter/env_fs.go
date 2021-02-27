@@ -97,10 +97,45 @@ func fsBuiltins(s *Script) starlark.StringDict {
 				"mode":       starlark.MakeInt64(int64(s.Mode())),
 			}), nil
 		}),
+		"truncate": starlark.NewBuiltin("truncate", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			var size starlark.Int
+			if err := starlark.UnpackArgs("truncate", args, kwargs, "path", &path, "size", &size); err != nil {
+				return starlark.None, err
+			}
+
+			sz, _ := size.Int64()
+			if err := os.Truncate(string(path), sz); err != nil {
+				return starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
+					"success":    starlark.Bool(false),
+					"error":      starlark.String(err.Error()),
+					"not_exists": starlark.Bool(os.IsNotExist(err)),
+				}), nil
+			}
+			return starlark.None, nil
+		}),
+		"expand_partition": starlark.NewBuiltin("expand_partition", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			var partition starlark.Int
+			if err := starlark.UnpackArgs("expand_partition", args, kwargs, "path", &path, "partition", &partition); err != nil {
+				return starlark.None, err
+			}
+
+			p, _ := partition.Int64()
+			if err := fs.ExpandImage(string(path), int(p)); err != nil {
+				return starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{
+					"success":    starlark.Bool(false),
+					"error":      starlark.String(err.Error()),
+					"not_exists": starlark.Bool(os.IsNotExist(err)),
+				}), nil
+			}
+			return starlark.None, nil
+		}),
 		"mnt_ext4": starlark.NewBuiltin("mnt_ext4", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 			var path starlark.String
 			var part *starlarkstruct.Struct
-			if err := starlark.UnpackPositionalArgs("mnt_ext4", args, kwargs, 2, &path, &part); err != nil {
+			var doResize starlark.Bool
+			if err := starlark.UnpackPositionalArgs("mnt_ext4", args, kwargs, 2, &path, &part, &doResize); err != nil {
 				return starlark.None, err
 			}
 			if part == nil {
@@ -131,7 +166,7 @@ func fsBuiltins(s *Script) starlark.StringDict {
 				return starlark.None, errors.New("length is not an integer")
 			}
 
-			mnt, err := fs.KMountExt4(string(path), uint64(st)*512, uint64(l)*512)
+			mnt, err := fs.KMountExt4(string(path), uint64(st)*512, uint64(l)*512, bool(doResize))
 			if err != nil {
 				return starlark.None, err
 			}
@@ -243,6 +278,7 @@ type FS interface {
 	RemoveAll(path string) error
 	Chmod(path string, mode os.FileMode) error
 	Chown(path string, uid, gid int) error
+	CopyInto(sysPath, path string) error
 }
 
 // FSMountProxy proxies access to a mounted filesystem.
@@ -289,7 +325,7 @@ func (p *FSMountProxy) Hash() (uint32, error) {
 // AttrNames implements starlark.Value.
 func (p *FSMountProxy) AttrNames() []string {
 	return []string{"base", "cat", "exists", "stat", "mkdir", "write",
-		"remove", "remove_all", "chmod", "chown"}
+		"remove", "remove_all", "chmod", "chown", "copy_into"}
 }
 
 // Attr implements starlark.Value.
@@ -369,6 +405,14 @@ func (p *FSMountProxy) Attr(name string) (starlark.Value, error) {
 				return starlark.None, errors.New("permissions must be an unsigned integer")
 			}
 			return starlark.None, p.fs.Write(string(path), []byte(data), os.FileMode(permInt))
+		}), nil
+	case "copy_into":
+		return starlark.NewBuiltin("copy_into", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var sysPath, path starlark.String
+			if err := starlark.UnpackArgs("copy_into", args, kwargs, "system_path", &sysPath, "path", &path); err != nil {
+				return starlark.None, err
+			}
+			return starlark.None, p.fs.CopyInto(string(sysPath), string(path))
 		}), nil
 	case "remove":
 		return starlark.NewBuiltin("remove", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {

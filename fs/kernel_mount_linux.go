@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"syscall"
 	"time"
@@ -69,9 +70,14 @@ func (m *KMount) Write(path string, data []byte, perms os.FileMode) error {
 	return ioutil.WriteFile(filepath.Join(m.mntPoint, path), data, perms)
 }
 
+// CopyInto implements sysd.FS.
+func (m *KMount) CopyInto(sysPath, path string) error {
+	return exec.Command("cp", "-vR", sysPath, filepath.Join(m.mntPoint, path)).Run()
+}
+
 // KMountExt4 invokes mount() to mount the ext4 filesystem in the given image,
 // at the provided mount point.
-func KMountExt4(img string, start, length uint64) (*KMount, error) {
+func KMountExt4(img string, start, length uint64, resize bool) (*KMount, error) {
 	mntPoint, err := ioutil.TempDir("", "raspberry-box")
 	if err != nil {
 		return nil, fmt.Errorf("TempDir() failed: %v", err)
@@ -80,6 +86,13 @@ func KMountExt4(img string, start, length uint64) (*KMount, error) {
 	l, err := losetup.Attach(img, start, false)
 	if err != nil {
 		return nil, fmt.Errorf("loop failed: %v", err)
+	}
+
+	if resize {
+		if err := exec.Command("resize2fs", l.Path()).Run(); err != nil {
+			l.Detach()
+			return nil, fmt.Errorf("resize2fs: %v", err)
+		}
 	}
 
 	if err := syscall.Mount(l.Path(), mntPoint, "ext4", syscall.MS_NOATIME, ""); err != nil {

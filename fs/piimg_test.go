@@ -63,7 +63,7 @@ func TestKMountPiImg(t *testing.T) {
 		t.Errorf("partition table check failed: %v", err)
 	}
 
-	m, err := KMountExt4(*imgPath, uint64(tab.GetPartition(2).GetLBAStart()*sectorSize), uint64(tab.GetPartition(2).GetLBALen()*sectorSize))
+	m, err := KMountExt4(*imgPath, uint64(tab.GetPartition(2).GetLBAStart()*sectorSize), uint64(tab.GetPartition(2).GetLBALen()*sectorSize), false)
 	if err != nil {
 		t.Fatalf("KMountExt4() failed: %v", err)
 	}

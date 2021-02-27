@@ -8,7 +8,8 @@ require (
 	github.com/rekby/mbr v0.0.0-20190325193910-2b19b9cdeebc
 	github.com/tredoe/osutil v0.0.0-20161130133508-7d3ee1afa71c
 	go.starlark.net v0.0.0-20190712141925-d6561f809f31
-	golang.org/x/net v0.0.0-20190628185345-da137c7871d7 // indirect
+	golang.org/x/net v0.0.0-20201021035429-f5854403a974 // indirect
+	golang.org/x/sys v0.0.0-20210119212857-b64e53b001e4 // indirect
 )
 
 go 1.13
