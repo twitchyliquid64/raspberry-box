@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/containers/storage/pkg/reexec"
 	"github.com/twitchyliquid64/raspberry-box/interpreter"
 )
 
@@ -27,6 +28,10 @@ func loadScript() ([]byte, error) {
 }
 
 func main() {
+	if reexec.Init() {
+		return
+	}
+
 	flag.Parse()
 	sData, err := loadScript()
 	if err != nil {

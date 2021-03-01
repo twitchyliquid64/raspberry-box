@@ -279,6 +279,7 @@ type FS interface {
 	Chmod(path string, mode os.FileMode) error
 	Chown(path string, uid, gid int) error
 	CopyInto(sysPath, path string) error
+	Mountpoint() string
 }
 
 // FSMountProxy proxies access to a mounted filesystem.

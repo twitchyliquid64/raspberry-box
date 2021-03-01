@@ -14,15 +14,16 @@ func generateEnvironment(s *Script) (starlark.StringDict, error) {
 		"crash": starlark.NewBuiltin("crash", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 			return nil, errors.New("soft crash: " + args[0].String())
 		}),
-		"struct":   starlark.NewBuiltin("struct", starlarkstruct.Make),
-		"args":     starlarkstruct.FromStringDict(starlarkstruct.Default, argBuiltins(s)),
-		"time":     starlarkstruct.FromStringDict(starlarkstruct.Default, t),
-		"math":     starlarkstruct.FromStringDict(starlarkstruct.Default, m),
-		"fs":       starlarkstruct.FromStringDict(starlarkstruct.Default, fsBuiltins(s)),
-		"systemd":  starlarkstruct.FromStringDict(starlarkstruct.Default, sysdBuiltins(s)),
-		"net":      starlarkstruct.FromStringDict(starlarkstruct.Default, netBuiltins(s)),
-		"compiler": starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{"version": starlark.MakeInt64(starlark.CompilerVersion)}),
-		"crypt":    starlarkstruct.FromStringDict(starlarkstruct.Default, cryptBuiltins(s)),
+		"struct":    starlark.NewBuiltin("struct", starlarkstruct.Make),
+		"args":      starlarkstruct.FromStringDict(starlarkstruct.Default, argBuiltins(s)),
+		"time":      starlarkstruct.FromStringDict(starlarkstruct.Default, t),
+		"math":      starlarkstruct.FromStringDict(starlarkstruct.Default, m),
+		"fs":        starlarkstruct.FromStringDict(starlarkstruct.Default, fsBuiltins(s)),
+		"systemd":   starlarkstruct.FromStringDict(starlarkstruct.Default, sysdBuiltins(s)),
+		"net":       starlarkstruct.FromStringDict(starlarkstruct.Default, netBuiltins(s)),
+		"compiler":  starlarkstruct.FromStringDict(starlarkstruct.Default, starlark.StringDict{"version": starlark.MakeInt64(starlark.CompilerVersion)}),
+		"crypt":     starlarkstruct.FromStringDict(starlarkstruct.Default, cryptBuiltins(s)),
+		"container": starlarkstruct.FromStringDict(starlarkstruct.Default, containerBuiltins(s)),
 	}
 
 	if s.testHook != nil {

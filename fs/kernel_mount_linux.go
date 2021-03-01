@@ -75,6 +75,11 @@ func (m *KMount) CopyInto(sysPath, path string) error {
 	return exec.Command("cp", "-vR", sysPath, filepath.Join(m.mntPoint, path)).Run()
 }
 
+// Mountpoint returns the path to the root of the mountpoint.
+func (m *KMount) Mountpoint() string {
+	return m.mntPoint
+}
+
 // KMountExt4 invokes mount() to mount the ext4 filesystem in the given image,
 // at the provided mount point.
 func KMountExt4(img string, start, length uint64, resize bool) (*KMount, error) {
