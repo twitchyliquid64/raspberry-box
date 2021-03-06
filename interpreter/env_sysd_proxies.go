@@ -409,6 +409,8 @@ func (p *SystemdServiceProxy) setConditions(thread *starlark.Thread, fn *starlar
 			conditions = append(conditions, sysd.ConditionNotExists(c.Arg))
 		case "ConditionHost":
 			conditions = append(conditions, sysd.ConditionHost(c.Arg))
+		case "ConditionFirstBoot":
+			conditions = append(conditions, sysd.ConditionFirstBoot(c.Arg))
 		default:
 			return starlark.None, fmt.Errorf("index %d has unknown condition kind %s", x, c.Kind)
 		}

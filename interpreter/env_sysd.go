@@ -214,6 +214,16 @@ func sysdBuiltins(s *Script) starlark.StringDict {
 				Arg:  string(path),
 			}, nil
 		}),
+		"ConditionFirstBoot": starlark.NewBuiltin("ConditionFirstBoot", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
+			var path starlark.String
+			if err := starlark.UnpackPositionalArgs("ConditionFirstBoot", args, kwargs, 1, &path); err != nil {
+				return starlark.None, err
+			}
+			return &SystemdConditionProxy{
+				Kind: "ConditionFirstBoot",
+				Arg:  string(path),
+			}, nil
+		}),
 		"install": starlark.NewBuiltin("install", func(thread *starlark.Thread, fn *starlark.Builtin, args starlark.Tuple, kwargs []starlark.Tuple) (starlark.Value, error) {
 			var name starlark.String
 			var f, u starlark.Value

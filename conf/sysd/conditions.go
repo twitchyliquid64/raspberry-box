@@ -60,3 +60,16 @@ func (c ConditionHost) conditionArg() string {
 func (c ConditionHost) String() string {
 	return "Host(" + string(c) + ")"
 }
+
+// ConditionFirstBoot specifies the current boot must be the first.
+type ConditionFirstBoot string
+
+func (c ConditionFirstBoot) conditionKey() string {
+	return "ConditionFirstBoot"
+}
+func (c ConditionFirstBoot) conditionArg() string {
+	return string(c)
+}
+func (c ConditionFirstBoot) String() string {
+	return "ConditionFirstBoot(" + string(c) + ")"
+}
