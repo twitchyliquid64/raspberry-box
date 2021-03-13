@@ -186,6 +186,32 @@ if not systemd.is_enabled_on_target(setup.image.ext4, 'thingy.service', 'multi-u
     systemd.enable_target(setup.image.ext4, 'thingy.service', 'multi-user.target')
 ```
 
+#### Run something on the first boot
+
+By way of example, this block of code creates a container the first time the Pi boots, using
+the image downloaded on the local system.
+
+```python
+setup_serv = systemd.Service(
+    type=systemd.const.service_oneshot,
+    exec_start="/usr/bin/podman create -v /home/root/config:/config --name=ha-instance --net=host --pull=never homeassistant/home-assistant",
+    user="root",
+    group="root",
+    kill_mode=systemd.const.killmode_controlgroup,
+    stdout=systemd.out.console + systemd.out.journal,
+    ignore_sigpipe=True,
+)
+setup_serv.conditions = [systemd.ConditionFirstBoot("yes")]
+ha_setup = systemd.Unit(
+    description="Creates home assistant container.",
+    required_by=['multi-user.target'],
+    service=setup_serv,
+)
+systemd.install(setup.image.ext4, 'ha_setup.service', ha_setup)
+if not systemd.is_enabled_on_target(setup.image.ext4, 'ha_setup.service', 'multi-user.target'):
+    systemd.enable_target(setup.image.ext4, 'ha_setup.service', 'multi-user.target')
+```
+
 ### Run FS tests
 
 go test -o /tmp/fs.test -v -c ./fs && sudo /tmp/fs.test --pi-img test.img
