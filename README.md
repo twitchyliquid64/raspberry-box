@@ -21,6 +21,7 @@ Make sure you have the Go compiler installed first.
 
  ```shell
 go get github.com/twitchyliquid64/raspberry-box/rbox
+nix-shell -p pkg-config gpgme lvm2 linuxHeaders btrfs-progs
 go build -o rbox github.com/twitchyliquid64/raspberry-box/rbox # Creates ./rbox
  ```
 
